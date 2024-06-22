@@ -1,0 +1,18 @@
+[
+    {
+        "text": "El ADN y el ARN son moléculas fundamentales en la genética y la biología molecular.",
+        "acronyms": "[('ADN', 'Ácido Desoxirribonucleico'), ('ARN', 'Ácido Ribonucleico')]"
+    },
+    {
+        "text": "La OMS y la OTAN son importantes instituciones a nivel mundial.",
+        "acronyms": "[('OMS', 'Organización Mundial de la Salud'), ('OTAN', 'Organización del Tratado del Atlántico Norte')]"
+    },
+    {
+        "text": "El organismo internacional de salud más reconocido a nivel global es la Organización Mundial de la Salud, mientras que la Organización del Tratado del Atlántico Norte es una entidad clave en temas de seguridad y defensa.",
+        "acronyms": "[]"
+    },
+    {
+        "text": "OCD is a mental health condition characterized by intrusive thoughts and repetitive behaviors.",
+        "acronyms": "[('Obsessive Compulsive Disorder', 'OCD')]"
+    }
+]
