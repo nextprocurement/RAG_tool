@@ -1,6 +1,6 @@
 pipe:
-  #- lang_id        # Identifies the language of the text
-  #- acronyms       # Identifies the acronyms of the text
+  - lang_id        # Identifies the language of the text
+  - acronyms       # Identifies the acronyms of the text
   - lemmas          # Creates lemmas from the text
   - ngrams          # Generates n-grams from the text
   - embeddings      # Generates BERT embeddings

@@ -157,6 +157,14 @@ cython_debug/
 # Folders to ignore
 RAG/
 
+#Files to ignore
+df_out_acronyms.parquet
+acronyms.parquet
+dataset_pruebas.xlsx
+cleaning_enrichment/config/config_carlos.yaml
+.DS_Store
+cleaning_enrichment/.DS_Store
+
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
 #  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
