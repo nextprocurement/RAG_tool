@@ -156,6 +156,9 @@ cython_debug/
 
 # Folders to ignore
 RAG/
+local_cache/
+db_OBJETO_CONTRATO/
+db_POC_acronyms/
 
 #Files to ignore
 df_out_acronyms.parquet
@@ -164,6 +167,12 @@ dataset_pruebas.xlsx
 cleaning_enrichment/config/config_carlos.yaml
 .DS_Store
 cleaning_enrichment/.DS_Store
+acronyms_paper.xlsx
+chroma.sqlite3
+objetos_zgz.xlsx
+dspy_solution_objeto_contrato.ipynb
+dspy_solution-Copy1.ipynb
+dataset_pruebas.parquet
 
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can

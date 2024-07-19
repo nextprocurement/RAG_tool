@@ -95,13 +95,13 @@ def cal_element_pipe(
 
     return df
 
-# Example of use: python3 pipe.py -s /export/usuarios_ml4ds/cggamella/RAG_tool/df_out_acronyms.parquet -o /export/usuarios_ml4ds/cggamella/RAG_tool/acronyms.parquet --cols_calculate_on title
+# Example of use: python3 pipe.py -s /export/usuarios_ml4ds/cggamella/RAG_tool/dataset_pruebas.parquet -o /export/usuarios_ml4ds/cggamella/RAG_tool/acronyms.parquet --cols_calculate_on text
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Options for clean and enrich text data.")
     parser.add_argument(
         "--config",
-        default="config/config.yaml",
+        default="config/config_carlos.yaml",
         help="Path to config YAML file",
         required=False)
     parser.add_argument(
@@ -198,8 +198,8 @@ if __name__ == "__main__":
     logger.info(f"-- -- Printing sample of the preprocessed data: {df.head()}")
     # Save data
     try:
-        if 'title_ACR' in df.columns:
-            df['title_ACR'] = df['title_ACR'].astype('str')
+        if 'text_ACR' in df.columns:
+            df['text_ACR'] = df['text_ACR'].astype('str')
         df.to_parquet(args.output)
     except Exception as E:
         logger.error(f"-- -- Error saving data: {E}. Exiting...")
