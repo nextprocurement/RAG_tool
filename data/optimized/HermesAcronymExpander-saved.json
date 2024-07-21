@@ -1,0 +1,12 @@
+{
+  "expander": {
+    "lm": null,
+    "traces": [],
+    "train": [],
+    "demos": [],
+    "signature_instructions": "\n    Expande los acr\u00f3nimos bas\u00e1ndose en el contexto del texto.\n    ",
+    "signature_prefix": "EXPANSION:",
+    "extended_signature_instructions": "\n    Expande los acr\u00f3nimos bas\u00e1ndose en el contexto del texto.\n    ",
+    "extended_signature_prefix": "EXPANSION:"
+  }
+}
