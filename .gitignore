@@ -159,6 +159,11 @@ RAG/
 local_cache/
 db_OBJETO_CONTRATO/
 db_POC_acronyms/
+files/
+logs/
+example/
+blade.py
+
 
 #Files to ignore
 df_out_acronyms.parquet
@@ -173,6 +178,7 @@ objetos_zgz.xlsx
 dspy_solution_objeto_contrato.ipynb
 dspy_solution-Copy1.ipynb
 dataset_pruebas.parquet
+bbdd_sintetica_dspy.ipynb
 
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can

@@ -1,5 +1,8 @@
-import chromadb
 from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
+import networkx as nx
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 
 ########################################################################
@@ -42,6 +45,43 @@ class Chunker:
                 int(self.context_window * self.window_overlap)
             snippet_idx += 1
 
+class GraphVisualizer:
+    def __init__(self, kernel='umbral', threshold=0.21, remove_self_links=True):
+        self.kernel = kernel
+        self.threshold = threshold
+        self.remove_self_links = remove_self_links
+
+    def set_embeddings(self, embeddings):
+        self.embeddings = np.array(embeddings)
+
+    def _get_similarity_matrix(self):
+        if self.embeddings is None:
+            raise ValueError("Please set embeddings before trying to get similarity matrix.")
+        #print(type(self.embeddings), self.embeddings.shape)
+        print(self.embeddings)
+        similarity_matrix = cosine_similarity(self.embeddings)
+        print("La matriz de similitud es:\n", similarity_matrix)
+        if self.kernel == "umbral":
+            similarity_matrix[similarity_matrix < self.threshold] = 0
+        if self.remove_self_links:
+            np.fill_diagonal(similarity_matrix, 0)
+        return similarity_matrix
+
+    def visualize_graph(self, plot_graph=True):
+        similarity_matrix = self._get_similarity_matrix()
+        G = nx.from_numpy_array(similarity_matrix, create_using=nx.DiGraph)
+
+        if plot_graph:
+            pos = nx.spring_layout(G, seed=42)
+            nx.draw(G, pos, node_color='skyblue', with_labels=True, node_size=70, edge_color='blue', width=0.4)
+            plt.title("Document Similarity Graph")
+            plt.show()
+
+        return {
+            'number_of_nodes': G.number_of_nodes(),
+            'number_of_edges': G.number_of_edges(),
+            'edges_per_node': G.number_of_edges() / G.number_of_nodes()
+        }
 ########################################################################
 # METHODS
 ########################################################################

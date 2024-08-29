@@ -1,0 +1,77 @@
+{
+  "generator": {
+    "lm": null,
+    "traces": [],
+    "train": [],
+    "demos": [
+      {
+        "augmented": true,
+        "TEXTO": "Contrato basado 114 2017 5330. SC-21 Adaptaci\u00f3n de dos pistas de p\u00e1del, centro deportivo Entrev\u00edas",
+        "ACRONIMOS": "SC-21"
+      },
+      {
+        "augmented": true,
+        "TEXTO": "Contrato de servicios control y vigilancia y coordinaci\u00f3n de seguridad y Salud obras construcci\u00f3n vial de evacuaci\u00f3n de los Barrios Altos de lorca",
+        "ACRONIMOS": "${TEXTO}"
+      },
+      {
+        "texto": "PROCEDIMIENTO NEGOCIADO SIN PUBLICIDAD.-\nEl objeto del contrato ser\u00e1 la realizaci\u00f3n del servicio para el desarrollo del sistema de tramitaci\u00f3n electr\u00f3nica de procedimientos de residuos de la Consejer\u00eda de Pol\u00edtica Territorial, Sostenibilidad y Seguridad, con el fin de poder disponer de los recursos necesarios en el \u00e1rea de desarrollo para realizar los trabajos requeridos para el mantenimiento de dicho Sistema.",
+        "detected_acronimos": "\/"
+      },
+      {
+        "texto": "Acuerdo Marco para el servicio de formaci\u00f3n en materia de evacuaci\u00f3n en situaciones de emergencia, realizaci\u00f3n de simulacros, redacci\u00f3n y actualizaci\u00f3n de planes de emergencia en los edificios dependientes del \u00c1rea de Gobierno de Cultura y Deportes",
+        "detected_acronimos": "\/"
+      },
+      {
+        "texto": "Servicio de mantenimiento de los sistemas de alarmas de robo e incendio, conexi\u00f3n a central receptora de alarmas y custodia de llaves e intervenci\u00f3n de los centros de salud del \u00c1rea-II de Cartagena ",
+        "detected_acronimos": "\/"
+      },
+      {
+        "texto": "Vigilancia y seguridad de determinadas dependencias administrativas de los servicios centrales de la Consejer\u00eda de Familia e Igualdad de Oportunidades, que se ubican en la C\/ Mieses, 26 de Valladolid",
+        "detected_acronimos": "C\/"
+      },
+      {
+        "texto": "Prestaci\u00f3n del servicio de redacci\u00f3n de documentaci\u00f3n t\u00e9cnica relativa a la ordenaci\u00f3n de espacios para la ubicaci\u00f3n de dependencias municipales en el Edificio Easo",
+        "detected_acronimos": "\/"
+      },
+      {
+        "texto": "Servicio de mantenimiento y actualizaci\u00f3n de equipos de endoscopia de la marca Olympus para el Hospital Universitario de Fuenlabrada",
+        "detected_acronimos": "\/"
+      },
+      {
+        "texto": "Mantenimiento integral de equipos de electromedicina del Hospital General Universitario Gregorio Mara\u00f1\u00f3n",
+        "detected_acronimos": "\/"
+      },
+      {
+        "texto": "Suministro,instalaci\u00f3n y puesta en marcha de infraestructura tecnol\u00f3gica para nuevos proyectos y adquisici\u00f3n de material inform\u00e1tico.",
+        "detected_acronimos": "\/"
+      },
+      {
+        "texto": "CONTRATACI\u00d3N DE UNA P\u00d3LIZA DE SEGURO DE VIDA DEL PERSONAL EMPLEADO DEL CENTRO DE C\u00c1LCULO DE \u00c1LAVA, S.A. PARA EL EJERCICIO 2018",
+        "detected_acronimos": "\/"
+      },
+      {
+        "texto": "Nuevos desarrollos mi funci\u00f3n publica",
+        "detected_acronimos": "\/"
+      },
+      {
+        "texto": "Adquisici\u00f3n de dos licencias Oracle DB \"Enterprise Edition\" para el Servicio P\u00fablico de Empleo de Castilla y Le\u00f3n\"",
+        "detected_acronimos": "DB"
+      },
+      {
+        "texto": "Contratos derivados del \"Acuerdo Marco para la homologaci\u00f3n del suministro de energ\u00eda el\u00e9ctrica y gas natural con destino al Sector P\u00fablico de la Comunidad Aut\u00f3noma de La Rioja\", sublotes 1.1, 1.2 y 2.1 para edicios Consejer\u00eda APH",
+        "detected_acronimos": "APH"
+      },
+      {
+        "texto": "Suminitro de chalecos antibalas externo\/interno y fundas",
+        "detected_acronimos": "\/"
+      },
+      {
+        "texto": "Programa de Prevenci\u00f3n de Riesgos derivados del uso inadecuado de las Tecnolog\u00edas de la Informaci\u00f3n y Comunicaci\u00f3n (TIC) Innov@amos dirigido a alumnos de Educaci\u00f3n Primaria y familias de la Comunidad de Madrid",
+        "detected_acronimos": "TIC"
+      }
+    ],
+    "signature_instructions": "Extrae los acr\u00f3nimos, siglas y abreviaturas del texto. Ten en cuenta que suelen ser palabras cortas.",
+    "signature_prefix": "ACRONIMOS:"
+  }
+}

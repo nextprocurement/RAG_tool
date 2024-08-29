@@ -1,0 +1,16 @@
+logger:
+  dir_logger: /export/usuarios_ml4ds/cggamella/RAG_tool/logs/app.log  # Directory for logs
+  console_log: true
+  file_log: true
+  log_level: INFO  # CRITICAL FATAL ERROR WARN WARNING INFO DEBUG NOTSET
+  logger_name: app-log
+
+# Model Configuration
+model_type: "hf"  # "hf" para Hugging Face(llama), "openai" para OpenAI
+model_name: "meta-llama/meta-llama-3-8b-instruct"  # O alternativa nombre del modelo que se usará (gpt-4o-2024-05-13)
+
+# Training Configuration
+train_all_modules: false  # Si es true, se entrenarán todos los módulos
+modules_to_train:  # Lista de nombres de módulos a entrenar si train_all_modules es false
+  #- HermesAcronymExpander
+  #- HermesAcronymDetector
