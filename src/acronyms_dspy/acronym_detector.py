@@ -1,9 +1,10 @@
 import dspy
-import pandas as pd
 import logging
 import json
+import pandas as pd
 import pathlib
 from sklearn.model_selection import train_test_split
+from dspy.primitives.assertions import DSPySuggestionError
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 from dspy.teleprompt import BootstrapFewShotWithRandomSearch
@@ -12,21 +13,22 @@ from dspy.teleprompt import BootstrapFewShotWithRandomSearch
 # @ TODO: Me genera duda lo siguiente: Ahora mismo las descripciones en la signature están en español. Está bien, dado que ahora mismo el dataset con el que trabajamos está en español. Pero el problema de esto es que no es escalable. Si en un futuro queremos trabajar con un dataset en inglés, tendríamos que cambiar todas las descripciones de las signatures. ¿No sería mejor poner las descripciones en inglés desde el principio? Así, si en un futuro queremos trabajar con un dataset en inglés, no tendríamos que cambiar nada. ¿Qué opinas? Eso sí, el fine-tuning va a ser un poco más complicado.
 class AcronymDetector(dspy.Signature):
     """
-    Extrae los acrónimos, siglas y abreviaturas del texto. Ten en cuenta que suelen ser palabras cortas.
+    Given a text identify the acronyms contained in it. If none are present in the text, say '/'.
     """
-    TEXTO = dspy.InputField()
-    ACRONIMOS = dspy.OutputField()
+    TEXT = dspy.InputField()
+    ACRONYMS = dspy.OutputField(desc="list of comma-separated acronyms", format=lambda x: ', '.join(x) if isinstance(x, list) else x)
 
 class AcronymDetectorModule(dspy.Module):
     def __init__(self):
         super().__init__()
-        self.generator = dspy.Predict(AcronymDetector)
+        self.generator = dspy.ChainOfThought(AcronymDetector)
         
         self.no_acronym_variations = [
-            '/', '/ (no hay acrónimos)', '', '${TEXTO}', '${ACRONIMOS}', '/ (no hay acronimos)',
-            '(no hay acronimos)', 'no hay acronimos',
-            '/ (No acronyms present in the document)',
-            '/ (not present in the document)', "'/'", 'N/A', '/.', 'N_A', 'NA', '""'
+            '/', '/ (no acronyms)', '', '${TEXT}', '${ACRONYMS}', '/ (no hay acrónimos)',
+            '(NO ACRONYMS)', 'no acronyms','sin acronimos', 'sin acrónimos',
+            '/ (No acronyms present in the document)', 
+            '/ (not present in the document)', "'/'", 'N/A', '/.', 'N_A', 'NA', '""', 'c', 'a', 'n',
+            'o', 's', 'i', 'r', 'm', 't', 'd', 'e', 'l', 'p', 'b', 'u', 'q', 'v', 'g', 'f', 'h', 'j', 'z', 'x', 'k', 'w', 'y'
         ]
     
     def _process_output(self, texto):
@@ -34,15 +36,41 @@ class AcronymDetectorModule(dspy.Module):
             return "/"
         else:
             return texto
+    
+    def verify_acronyms(self, texto, acronyms):
+        """
+        Verify if all acronyms are present in the text.
+        Used to suggest a condition in the teleprompter.
+        """
+        # Normalize text and acronyms to lowercase and split into words
+        text_norm = texto.lower().split()
+        acronyms_norm = [acronym.strip().lower() for acronym in acronyms.split(',')]
 
+        # Verify presence of acronyms in text
+        resultados_presencia = [acronym in text_norm for acronym in acronyms_norm]
+
+        # Return True if all acronyms are present in the text
+        return all(resultados_presencia)
+    
     def forward(self, texto):
-        response = self.generator(TEXTO=texto)
-        print("La respuesta es:", response)
-        if len(texto) == len(response.ACRONIMOS) or texto == response.ACRONIMOS:
-            return dspy.Prediction(ACRONIMOS='/')
-        else:   
-            return dspy.Prediction(ACRONIMOS=self._process_output(response.ACRONIMOS))
+        response = self.generator(TEXT=texto)
+        acronyms = response.ACRONYMS
+    
+        try:
+            # Suggestions with error handling
+            dspy.Suggest(
+                self.verify_acronyms(texto, acronyms),
+                "Los acrónimos deben coincidir con las palabras del texto en minúsculas.",
+                target_module=AcronymDetector
+            )
+        except DSPySuggestionError as e:
+            print(f"Sugerencia fallida: {e}. Continuando ejecución...")
         
+        if len(texto) == len(acronyms) or texto == acronyms:
+            return dspy.Prediction(ACRONYMS='/')
+        else:
+            return dspy.Prediction(ACRONYMS=self._process_output(acronyms))
+      
 class HermesAcronymDetector:
     
     def __init__(
@@ -98,16 +126,14 @@ class HermesAcronymDetector:
         self._logger.info("AcronymDetectorModule optimized.")
         self.module.save(trained_promt)
 
-
     def validate_acronym_detection(self, example, pred, trace=None):
         """
         Validates if the predicted acronym is present in the example text.
-
-        Returns 1 if the acronym is present or correctly predicted as '/', otherwise 0.
+        Returns 1 if the acronym is present or correctly predicted (there are texts without acronyms) as '/', otherwise 0.
         """
         # Normalize text (where acronym its ideally contained) and predicted acronym to lowercase
         text_lower = example['texto'].lower()
-        pred_acronym_lower = pred.ACRONIMOS.lower()
+        pred_acronym_lower = pred.ACRONYMS.lower()
 
         if pred_acronym_lower == '/':
             if example['detected_acronimos'] == '/':  
@@ -165,6 +191,6 @@ class HermesAcronymDetector:
             num_candidate_programs=num_candidate_programs,
             max_rounds=max_rounds,
         )
-
         compiled_model = teleprompter.compile(AcronymDetectorModule(), trainset=tr_ex, valset=test_ex)
         return compiled_model
+    

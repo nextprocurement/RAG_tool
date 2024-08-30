@@ -9,10 +9,10 @@ from dspy.teleprompt import BootstrapFewShotWithRandomSearch
 
 class AcronymExpander(dspy.Signature):
     """
-    Expande los acrónimos basándose en el contexto del texto.
+    Expand the acronyms based on the text.
     """
-    TEXTO = dspy.InputField(desc="Texto que contiene el acrónimo,sigla o abreviatura")
-    ACRONIMO = dspy.InputField(desc="Acrónimo, sigla o abreviatura a expandir")
+    TEXTO = dspy.InputField()
+    ACRONIMO = dspy.InputField()
     EXPANSION = dspy.OutputField(desc="Expansión del acrónimo, sigla o abreviatura, si es posible expandirlo.")
 
 class AcronymExpanderModule(dspy.Module):
@@ -80,7 +80,8 @@ class HermesAcronymExpander(object):
             if not pathlib.Path(trained_promt).exists():
                 self._logger.error("Trained prompt not found. Exiting.")
                 return
-            self.module = AcronymExpanderModule.load(trained_promt)
+            self.module = AcronymExpanderModule()
+            self.module.load(trained_promt)
             self._logger.info(f"AcronymExpanderModule loaded from {trained_promt}") 
         else:
             if not data_path:
@@ -100,28 +101,37 @@ class HermesAcronymExpander(object):
         self.module.save(trained_promt)
 
     def validate_expansion(self, example, pred, trace=None):
+        """
+        Validates the expansion of acronyms by comparing embeddings from the transformer model.
+        Returns
+        -------
+        bool
+            True if the similarity is above the threshold, otherwise False.
+        """
+        try:
+            # Encode the predicted and reference expansions using the transformer model
+            prediction_embedding = self.trf_model.encode(pred.expansion)
+            reference_embedding = self.trf_model.encode(example.expansion_correcta)
 
-        prediction_embedding = self.trf_model.encode(pred.expansion)
-        reference_embedding = self.trf_model.encode(example.expansion_correcta)
+            # Log embeddings for debugging purposes
+            self._logger.debug(f"Prediction embedding: {prediction_embedding}")
+            self._logger.debug(f"Reference embedding: {reference_embedding}")
 
-        print("La pred embedding es:", prediction_embedding)
-        print("La ref embedding es:", reference_embedding)
+            # Calculate cosine similarity between embeddings
+            similarity = cosine_similarity([prediction_embedding], [reference_embedding])[0][0]
+            self._logger.info(f"Cosine similarity: {similarity}")
 
-        # Calcular la similitud del coseno
-        similarity = cosine_similarity([prediction_embedding], [
-            reference_embedding])[0][0]
-
-        # Evaluar si la similitud está por encima de un umbral-> [-1,1]
-        if similarity > 0.7:
-            # Considerando que si está por encima de 0.7 es un acierto
-            print(similarity)
-            return True
-        else:
-            print(similarity)
+            # Check if the similarity exceeds the threshold (0.7)
+            if similarity > 0.7:
+                return True
+            else:
+                return False
+        except Exception as e:
+            self._logger.error(f"Error during expansion validation: {e}")
             return False
 
     def create_dtset_expanded_acronyms(excel_path):
-        # Cargar datos
+        # Load the data from the excel file
         df = pd.read_excel(excel_path)
         df = df[['text', 'detected_acr', 'acr_des']]
         df = df[df['detected_acr'] != '/']

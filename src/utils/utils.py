@@ -52,7 +52,7 @@ def process_dataframe(
         for id_chunk, chunk in chunker(text):  
             # Detect acronyms in the current chunk
             prediction = acronym_detector.forward(chunk)
-            acronyms = clean_acronyms(prediction.ACRONIMOS)
+            acronyms = clean_acronyms(prediction.ACRONYMS)
             acronyms_list = acronyms.lower().split(',')
             print(f"DETECTED ACR IN CHUNK: {acronyms_list}")
 
@@ -106,12 +106,17 @@ def filter_companies(acronyms):
 def filter_items_and_acronyms(items):
     """
     Filters items from a list based on the following criteria:
+    - The item must be 10 characters or fewer.
+    - The item must contain only one word.
+    - The item must have three or fewer digits.
+    - The item must be longer than one character.
     """
     filtered_items = [
         item for item in items
         if len(item) <= 10
         and len(item.split()) <= 1
         and sum(c.isdigit() for c in item) <= 3
+        and len(item) > 1
     ]
     return filtered_items
 

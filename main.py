@@ -8,6 +8,8 @@ from src.utils.utils import *
 from dotenv import load_dotenv
 from src.utils.utils import init_logger
 from src.utils.vector_store_utils import Chunker
+from dspy.primitives.assertions import assert_transform_module, backtrack_handler
+import functools
 from src.acronyms_dspy.acronym_expander import HermesAcronymExpander, AcronymExpanderModule
 from src.acronyms_dspy.acronym_detector import HermesAcronymDetector, AcronymDetectorModule
 
@@ -56,7 +58,7 @@ if __name__ == "__main__":
     # Initialize the model based on the specified type
     if args.llm_type == "llama":
         logger.info("Inicializando el modelo LLaMA...")
-        lm = dspy.HFClientTGI(model="meta-llama/meta-llama-3-8b-instruct", port=8090, url="http://127.0.0.0")
+        lm = dspy.HFClientTGI(model="meta-llama/meta-llama-3-8b", port=8090, url="http://127.0.0.0")
     elif args.llm_type == "gpt":
         logger.info("Inicializando el modelo GPT...")
         # Load OpenAI env from file .env
@@ -71,6 +73,9 @@ if __name__ == "__main__":
     
     # Configure dspy with model and temperature selected
     dspy.settings.configure(lm=lm, temperature=0)
+    # It seems to be mandatory to configure the settings of dspy backtracking before using it
+    # Configuration of dspy backtracking
+    dspy.settings.configure(trace=[])
     
     #@TODO: Create file folder where all excel files will be stored instead of single file.
     
@@ -117,6 +122,11 @@ if __name__ == "__main__":
                 logger.error(f"No se encontró el modelo entrenado en {trained_promt}. Considera entrenarlo primero.")
                 raise FileNotFoundError(f"El modelo entrenado no existe en {trained_promt}. Entrena el modelo antes de usarlo.")
         
+        # Configure the module to use the Retry transformation with a maximum of 2 backtracks
+        detector.module = assert_transform_module(
+            detector.module.map_named_predictors(dspy.Retry),
+            functools.partial(backtrack_handler, max_backtracks=2) 
+        )
         try:
             df_out = process_dataframe(
                 path=args.data_path, 
