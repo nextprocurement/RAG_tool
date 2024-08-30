@@ -81,6 +81,8 @@ if __name__ == "__main__":
     
     # Decide whether to train based on configuration file and arguments
     do_train = getattr(args, 'do_train', False) or config.get('train_all_modules', False)
+    # Get the column name from the configuration
+    column_name = config.get('data_column_name', 'text')
     
     if args.action in ["detect", "both"]:
         ########################################
@@ -129,7 +131,8 @@ if __name__ == "__main__":
         )
         try:
             df_out = process_dataframe(
-                path=args.data_path, 
+                path=args.data_path,
+                config=config,
                 acronym_detector=detector.module,
                 context_window=args.context_window,
                 max_windows=args.max_windows,
@@ -181,6 +184,5 @@ if __name__ == "__main__":
     #my_acronym_expander = AcronymExpanderModule()
     #result = my_acronym_expander(texto,acronimo)
     #print("Resultado:", result)
-    
     # Ahora se puede usar el expansor para expandir acrónimos
     #expander.module(texto="Quiero participar en una ONG porque quiero ser caritativa", acronimo="ONG")

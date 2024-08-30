@@ -3,12 +3,14 @@ import logging
 import pandas as pd
 import re
 import nltk
+import yaml
 from nltk.tokenize import sent_tokenize
 from src.acronyms_dspy.acronym_detector import AcronymDetectorModule
 from src.utils.vector_store_utils import Chunker
 
 def process_dataframe(
-    path, 
+    path,
+    config,
     chunker=None, 
     acronym_detector=None, 
     context_window=3000, 
@@ -17,9 +19,9 @@ def process_dataframe(
 ):
     """
     Processes a DataFrame of text to detect and filter acronyms.
-
     Parameters:
     - path: str or Path, path to the Excel file containing the data.
+    - config: dict, configuration loaded from the YAML file.
     - chunker: instance of Chunker, if not provided, a new one is created with the specified parameters.
     - acronym_detector: instance of AcronymDetectorModule, if not provided, a new one is created.
     - context_window: int, size of the context window for the chunker.
@@ -29,9 +31,16 @@ def process_dataframe(
     Returns:
     - df: Processed DataFrame with detected acronyms.
     """
-    
-    # Load the DataFrame from the Excel file
-    df = pd.read_excel(path).copy()
+    # Obtain the column name from the configuration file
+    column_name = config.get('data_column_name', 'text')
+
+    # Load the DataFrame based on the file extension
+    if path.endswith('.xlsx'):
+        df = pd.read_excel(path).copy()
+    elif path.endswith('.parquet'):
+        df = pd.read_parquet(path).copy()
+    else:
+        raise ValueError("Unsupported file format. Please provide a .xlsx or .parquet file.")
 
     # Initialize acronym detector and chunker if not provided
     if acronym_detector is None:
@@ -45,8 +54,11 @@ def process_dataframe(
 
     # Iterate over each row in the DataFrame
     for identifier, row in df.iterrows():
-        text = row['text']
+        text = row[column_name]
         print(f"PROCESSING ROW WITH TEXT: {text}")
+        if not text:
+            print(f"!!Be careful your data haven't got a column with that name. Check YAML file.")
+            return
 
         # Detect acronyms in each chunk of the text
         for id_chunk, chunk in chunker(text):  
@@ -83,17 +95,17 @@ def process_dataframe(
             # Update the DataFrame with the detected acronyms
             df.at[identifier, 'Acronyms Detected(LLM)'] = ', '.join(detected_acronyms)
 
-    return df
+    return df[[column_name, 'Acronyms Detected(LLM)']]
 
 def filter_acronyms_in_text(text, acronyms):
-    """
-    Filters and returns a list of acronyms that are present in the given text.
-    """
-    text_lower = text.lower()
+    
+    text_lower = text.lower() 
     # Filter acronyms based on whether they are found within the text
-    filtered_acronyms = [acronym for acronym in acronyms if acronym.lower() in text_lower]
+    filtered_acronyms = [acronym for acronym in acronyms if acronym.lower() in text_lower.split()]
+    print("Filtered acronyms:", filtered_acronyms)
 
-    return filtered_acronyms
+    # Return the filtered list of acronyms or '/' if none are found
+    return filtered_acronyms if filtered_acronyms else '/'
 
 def filter_companies(acronyms):
     """

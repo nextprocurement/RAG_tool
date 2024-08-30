@@ -6,11 +6,13 @@ logger:
   logger_name: app-log
 
 # Model Configuration
-model_type: "hf"  # "hf" para Hugging Face(llama), "openai" para OpenAI
+model_type: "hf"  # "hf" for Hugging Face(llama), "openai" for OpenAI
 model_name: "meta-llama/meta-llama-3-8b-instruct"  # O alternativa nombre del modelo que se usará (gpt-4o-2024-05-13)
+# DataFrame Configuration
+data_column_name: "texto_sin_preprocesar"  # Define the column name to read, can be 'text', 'title', 'texto_sin_preprocesar', etc...
 
 # Training Configuration
-train_all_modules: false  # Si es true, se entrenarán todos los módulos
-modules_to_train:  # Lista de nombres de módulos a entrenar si train_all_modules es false
+train_all_modules: false  # If is true, all modules will be trained, if is false, only the modules in the list modules_to_train will be trained
+modules_to_train:  # List of modules to train
   #- HermesAcronymExpander
   #- HermesAcronymDetector
