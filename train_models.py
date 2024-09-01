@@ -35,7 +35,7 @@ def main():
     argparser.add_argument(
         "--num_topics",
         help="Number of topics",
-        type=int, default=83, required=False)
+        type=int, default=20, required=False)
     argparser.add_argument(
         "--num_iters",
         help="Number of iterations",
@@ -47,7 +47,7 @@ def main():
     argparser.add_argument(
         "--load_data_path",
         help="Path to the preprocessed data.",
-        type=str, default='data/all_extracted_12aug_es_11_objectives_embeddings.parquet',
+        type=str, default='/export/data_ml4ds/NextProcurement/PLACE/pliegos_objectives_preprocessed/all_extracted_12aug_es/all_extracted_12aug_es_11_objectives_embeddings.parquet',
         required=False)
     argparser.add_argument(
         "--model_path",
@@ -58,7 +58,7 @@ def main():
         help="how many documents to run",
         type=int, 
         required=False,
-        default=10
+        default=100
     )
     argparser.add_argument(
         "--do_second_level",
@@ -70,7 +70,7 @@ def main():
     args = argparser.parse_args()
     
     if args.model_type == 'all':
-        for model_type in ['TopicGPT']:#'MalletLda', 'Ctm', 'BERTopic'
+        for model_type in ['TopicGPT','MalletLda', 'Ctm', 'BERTopic']:
             
             model_path = pathlib.Path(args.model_path) / f"{model_type}_{args.num_topics}"
             print(f"-- -- Training model of type {model_type} at {model_path}...")
