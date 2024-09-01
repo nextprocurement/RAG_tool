@@ -14,7 +14,6 @@ import openai
 import numpy as np
 import pandas as pd
 import spacy
-import tomotopy as tp
 from bertopic import BERTopic
 from bertopic.representation import KeyBERTInspired, MaximalMarginalRelevance
 from bertopic.vectorizers import ClassTfidfTransformer
@@ -172,7 +171,7 @@ class TopicModel(ABC):
 
         # Load the processed data
         # df is a pandas DataFrame with columns:
-        # 'text', 'label', 'sub_labels', 'processed_text'
+        # 'text', 'label', 'sub_labels', 'lemmas'
         df = load_processed_data(self.load_data_path)
         self.df = df
 
@@ -554,7 +553,7 @@ class MalletLdaModel(TopicModel):
         num_iters: int = 1000,
         doc_topic_thr: float = 0.0,
         token_regexp: str = "[\p{L}\p{N}][\p{L}\p{N}\p{P}]*\p{L}",
-        mallet_path: str = "src/topicmodeling/Mallet-202108bin/mallet",
+        mallet_path: str = "src/topicmodeling/Mallet-202108/bin/mallet",
         topn: int = 15,
         load_data_path: str = "data/source/cordis_preprocessed.json",
         load_model: bool = False,
@@ -644,7 +643,7 @@ class MalletLdaModel(TopicModel):
         self._logger.info(f"-- -- Creating Mallet corpus.txt...")
         corpus_txt_path = self.model_folder / "corpus.txt"
         with corpus_txt_path.open("w", encoding="utf8") as fout:
-            for i, t in enumerate(self.df.processed_text):
+            for i, t in enumerate(self.df.lemmas):
                 fout.write(f"{i} 0 {t}\n")
         self._logger.info(f"-- -- Mallet corpus.txt created.")
 
@@ -973,262 +972,6 @@ class MalletLdaModel(TopicModel):
 
         return self.word_topic_distribution
 
-
-class TomotopyLdaModel(TopicModel):
-
-    def __init__(
-        self,
-        num_topics: int = 35,
-        topn: int = 15,
-        num_iters: int = 2000,
-        load_data_path: str = "data/source/cordis_preprocessed.json",
-        load_model: bool = False,
-        model_path: str = None,
-        logger: logging.Logger = None,
-    ) -> None:
-
-        # Initialize logger
-        if logger:
-            self._logger = logger
-        else:
-            logging.basicConfig(level='INFO')
-            self._logger = logging.getLogger('TomotopyLdaModel')
-
-        # Initialize the TopicModel class
-        super().__init__(
-            num_topics, topn, load_data_path, load_model, model_path, self._logger)
-
-        # Initialize specific parameters for Tomotopy LDA
-        self.num_iters = num_iters
-
-    def train(
-        self,
-    ) -> None:
-        """
-        Train the topic model and save the data to save_data_path
-        """
-
-        # Call the train method from the parent class to load the data and initialize the save_path
-        super().train()
-
-        self._logger.info(
-            f"-- -- Creatinig TomotopyLDA object and adding docs..."
-        )
-        self.model = tp.LDAModel(k=self.num_topics, tw=tp.TermWeight.ONE)
-        [self.model.add_doc(doc) for doc in self.train_data]
-
-        self._logger.info(
-            f"-- -- Training TomotopyLDA model with {self.num_topics} topics..."
-        )
-        pbar = tqdm(total=self.num_iters, desc='Training Progress')
-        for i in range(0, self.num_iters, 10):
-            self.model.train(10)
-            # Update the progress bar
-            pbar.update(10)
-
-            # Optionally print additional info at specified intervals
-            if i % 300 == 0 and i > 0:
-
-                # Get topic keys
-                topics = self.print_topics(verbose=False)
-                topics = [topics[k] for k in topics.keys()]
-                pbar.write(
-                    f'Iteration: {i}, Log-likelihood: {self.model.ll_per_word}, Perplexity: {self.model.perplexity}, cv coherence: {self.get_coherence(self.train_data, topics, metric="c_v")}')
-
-        # Close the progress bar
-        pbar.close()
-
-        # Calculate evaluation metrics
-        self._logger.info(
-            f"-- -- Calculating evaluation metrics..."
-        )
-        topics = self.print_topics(verbose=False)
-        topics_ = [topics[k] for k in topics.keys()]
-        metrics = self.get_coherence(self.train_data, topics_, all=True)
-        self._logger.info(
-            f"-- -- Coherence metrics: {metrics}"
-        )
-
-        # Calculate distributions
-        self._logger.info(
-            f"-- -- Calculating topics and distributions..."
-        )
-
-        self.maked_docs = []
-        for doc in self.train_data:
-            curr_doc = self.model.make_doc(doc)
-            self.maked_docs.append(curr_doc)
-        self.vocab = self.model.used_vocabs
-
-        document_probas, doc_topic_probas = self.group_docs_to_topics()
-        self._logger.info(
-            f"-- -- Document-topic probability matrix shape {np.array(doc_topic_probas).shape}")
-
-        topic_reses, topic_res_nums = [], []
-        for index in range(len(self.maked_docs)):
-            a, b = self.predict_doc_with_probs(index, topics)
-            topic_reses.append(a)
-            topic_res_nums.append(b)
-
-        # Calculate bow
-        bow_mat = self.get_bow()
-
-        # Save the model data
-        self.save_results(
-            document_probas, doc_topic_probas, self.get_word_topic_distribution(), self.train_data, metrics, topics, topic_reses, topic_res_nums, bow_mat)
-
-        return
-
-    def print_topics(
-        self,
-        verbose=False
-    ) -> dict:
-        """
-        Print the list of topics for the topic model
-
-        Parameters
-        ----------
-        verbose : bool, optional
-            If True, print the topics to the console, by default False
-
-        Returns
-        -------
-        dict
-            Dictionary of topics and their keywords
-        """
-
-        if not self.load_model:
-
-            self.topics = dict()
-            for k in range(self.model.k):
-                topic_words = [
-                    tup[0] for tup in self.model.get_topic_words(k, self.topn)]
-                self.topics[k] = topic_words
-
-        if verbose:
-            [print(f"Topic {k}: {v}") for k, v in self.topics.items()]
-        return self.topics
-
-    def group_docs_to_topics(
-        self
-    ) -> Tuple[List[np.ndarray], Dict]:
-        """
-        Calculate doc_prob_topic and topics_probs. If the model is not loaded, calculate the values and save them for later use. Otherwise, return the saved values.
-
-        Returns
-        -------
-        doc_prob_topic : List[np.ndarray]
-            List of numpy arrays of length D, where each numpy array has shape (T,) and T is the number of topics from the topic model. For each document, it contains a list of topic probabilities.
-        topics_probs : Dict
-            Dictionary with keys the ids of the topics. For each topic, it contains a list of tuples [(doc_id, probability)...]. Each tuple has a document id, representing the row id of the document, and probability the document belong to this topic. For each topic, it only contains a list of documents that are the most likely associated with that topic.
-        """
-
-        if not self.load_model:
-            doc_prob_topic = []
-            doc_to_topics, topics_probs = {}, {}
-
-            self._logger.info(
-                f"-- -- Sorting document and topic probabilities...")
-            for doc_id, doc in tqdm(enumerate(self.maked_docs)):
-                if doc_id % 3000 == 0:
-                    self._logger.info(
-                        f"-- -- Predicting probability on index {doc_id}")
-
-                inferred, _ = self.model.infer(doc)
-
-                doc_topics = list(enumerate(inferred))
-                doc_prob_topic.append(inferred)
-
-                # Infer the top three topics of the document
-                doc_topics.sort(key=lambda a: a[1], reverse=True)
-
-                # print('doc topics {}'.format(doc_topics))
-                doc_to_topics[doc_id] = doc_topics
-
-                '''
-                doc_topics[0][0] is the topic id. doc_topics[0][1] is doc id probability.
-                '''
-                if doc_topics[0][0] in topics_probs:
-                    topics_probs[doc_topics[0][0]].append(
-                        (doc_id, doc_topics[0][1]))
-                else:
-                    topics_probs[doc_topics[0][0]] = [
-                        (doc_id, doc_topics[0][1])]
-
-            # Sort the documents by topics based on their probability in descending order
-            for k, v in topics_probs.items():
-                topics_probs[k].sort(key=lambda a: a[1], reverse=True)
-
-            self.doc_to_topics = doc_to_topics
-            self.document_probas = topics_probs
-            self.doc_topic_probas = doc_prob_topic
-
-        return self.document_probas, self.doc_topic_probas
-
-    def get_word_topic_distribution(
-        self
-    ) -> Dict:
-        """
-        Calculate the word-topic distribution. If the model is not loaded, calculate the values and save them for later use. Otherwise, return the saved values.
-
-        Data structure
-            {
-            [word1]: [topic1, topic2, topic3...]
-            [word2]: [topic1, topic2, topic3...]
-            [word3]: [topic1, topic2, topic3...]
-            ...
-            }
-
-        Returns
-        -------
-        Dict
-            Dictionary with keys the words and values a list of probabilities of the word belonging to topics.
-        """
-
-        if not self.load_model:
-            topic_dist = dict()
-
-            for i in range(self.num_topics):
-                topic_dist[i] = self.model.get_topic_word_dist(i)
-
-            self.word_topic_distribution = {
-                word: [v[i] for v in topic_dist.values()] for i, word in enumerate(self.vocab)}
-
-        return self.word_topic_distribution
-
-    def infer(
-        self,
-        docs: List[str],
-    ) -> np.ndarray:
-        """Perform inference on unseen documents.
-
-        Parameters
-        ----------
-        docs : List[str]
-            List of documents to perform inference on.
-
-        Returns
-        -------
-        np.ndarray
-            Array of inferred thetas
-        """
-
-        docs, _ = super().infer(docs)
-
-        self._logger.info(f"-- -- Performing inference on unseen documents...")
-        docs_tokens = [doc.split() for doc in docs]
-
-        self._logger.info(f"-- -- Adding docs to TomotopyLDA...")
-        doc_inst = [self.model.make_doc(text) for text in docs_tokens]
-
-        self._logger.info(f"-- -- Inferring thetas...")
-        topic_prob, log_ll = self.model.infer(doc_inst)
-        thetas = np.array(topic_prob)
-        self._logger.info(f"-- -- Inferred thetas shape {thetas.shape}")
-
-        return thetas
-
-
 class CtmModel(TopicModel):
 
     def __init__(
@@ -1277,8 +1020,8 @@ class CtmModel(TopicModel):
         )
         qt = TopicModelDataPreparation(self.sbert_model)
         self.training_dataset = qt.fit(
-            text_for_contextual=self.df.text,
-            text_for_bow=self.df.processed_text,
+            text_for_contextual=self.df.raw_text,
+            text_for_bow=self.df.lemmas,
             # if self.embeddings is not None no contextual model to generate the embeddings is used, rather the embeddings are provided
             custom_embeddings=self.embeddings
         )
@@ -1645,7 +1388,7 @@ class BERTopicModel(TopicModel):
         )
 
         # Train model
-        texts = self.df.text.values.tolist()
+        texts = self.df.raw_text.values.tolist()
 
         # probs = The probability of the assigned topic per document.
         # If `calculate_probabilities` in BERTopic is set to True, then
@@ -1894,9 +1637,9 @@ class TopicGPTModel(TopicModel):
 
         # Initialize specific parameters for TopicGPT
         self._p_scripts = pathlib.Path(
-            os.getcwd()) / "src/topic_modeling/topicGPT/script"
+            os.getcwd()) / "src/topicmodeling/topicGPT/script"
         self._p_prompts = pathlib.Path(
-            os.getcwd()) / "src/topic_modeling/topicGPT/prompt"
+            os.getcwd()) / "src/topicmodeling/topicGPT/prompt"
         self._sample = sample
 
         # Generation I/O
@@ -1962,6 +1705,7 @@ class TopicGPTModel(TopicModel):
 
         # Save subsample if specified
         df_sample = self.df.copy()
+        df_sample["text"] = df_sample["raw_text"]
         if self._sample:
             if isinstance(self._sample, float):
                 df_sample = df_sample.sample(frac=self._sample)

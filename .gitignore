@@ -190,4 +190,7 @@ Untitled.ipynb
 
 
 data/logs
+data/models/MalletLda_83/modelFiles
 src/topicmodeling/Mallet-202108
+data/models
+data/all_extracted_12aug_es_11_objectives_embeddings.parquet
