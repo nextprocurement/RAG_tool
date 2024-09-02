@@ -134,6 +134,7 @@ if __name__ == "__main__":
                 path=args.data_path,
                 config=config,
                 acronym_detector=detector.module,
+                acronym_expander=None,
                 context_window=args.context_window,
                 max_windows=args.max_windows,
                 window_overlap=args.window_overlap
@@ -147,28 +148,57 @@ if __name__ == "__main__":
         ########################################
         # Initialize and use HermesAcronymExpander
         ########################################
-        if do_train or "HermesAcronymExpander" in config.get('modules_to_train', []):
-            logger.info("Inicializando y usando HermesAcronymExpander...")
-            expander = HermesAcronymExpander(
-                do_train=do_train,
+        # Verify if the model should be trained
+        should_train = do_train or "HermesAcronymExpander" in (config.get('modules_to_train') or [])
+
+        if should_train:
+            # Train the model
+            logger.info("Entrenando y usando HermesAcronymExpander...")
+            detector = HermesAcronymExpander(
+                do_train=True,
                 data_path=args.data_path,
+                trained_promt=trained_promt,
                 logger=logger
             )
+            # After training, verify if the model was saved correctly
+            if not trained_promt.exists():
+                logger.error(f"El modelo entrenado no se guardó correctamente en {trained_promt}.")
+                raise FileNotFoundError(f"El modelo entrenado no se encuentra en {trained_promt}.")
         else:
-            logger.info("Cargando AcronymExpanderModule preentrenado...")
-            expander = HermesAcronymExpander(do_train=False, logger=logger)
-        
-        # Asumiendo que los acrónimos detectados están en 'Acronyms Detected(LLM)'
-        for idx, row in df.iterrows():
-            detected_acronyms = row.get('Acronyms Detected(LLM)', '')
-            expansions = []
-            if detected_acronyms and detected_acronyms != '/':
-                for acronym in detected_acronyms.split(','):
-                    prediction = expander.module.forward(row['text'], acronym.strip())
-                    expansions.append(prediction.EXPANSION)
-                df.at[idx, 'Acronyms Expanded'] = ', '.join(expansions)
+            # Use the pre-trained model
+            if trained_promt.exists():
+                logger.info(f"Cargando AcronymExpanderModule preentrenado desde {trained_promt}...")
+                time.sleep(5)
+                expander = HermesAcronymExpander(
+                    do_train=False,
+                    data_path=args.data_path,
+                    trained_promt=trained_promt,
+                    logger=logger
+                )
             else:
-                df.at[idx, 'Acronyms Expanded'] = '/'
+                # If the model don´t have trained_promt, raise an error
+                logger.error(f"No se encontró el modelo entrenado en {trained_promt}. Considera entrenarlo primero.")
+                raise FileNotFoundError(f"El modelo entrenado no existe en {trained_promt}. Entrena el modelo antes de usarlo.")
+        
+        # Configure the module to use the Retry transformation with a maximum of 2 backtracks
+        expander.module = assert_transform_module(
+            expander.module.map_named_predictors(dspy.Retry),
+            functools.partial(backtrack_handler, max_backtracks=2) 
+        )
+        try:
+            df_out = process_dataframe(
+                path=args.data_path,
+                config=config,
+                acronym_detector=None,
+                acronym_expander= expander.module,
+                context_window=args.context_window,
+                max_windows=args.max_windows,
+                window_overlap=args.window_overlap
+            )
+        except Exception as e:
+            logger.error(f"Ocurrió un error al procesar el DataFrame: {str(e)}")
+            raise e
+        
 
     # Save df in a new Excel file with the same name as the input file plus '_out'
     path = pathlib.Path(args.data_path)

@@ -6,6 +6,7 @@ from sklearn.model_selection import train_test_split
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 from dspy.teleprompt import BootstrapFewShotWithRandomSearch
+from lingua import Language, LanguageDetectorBuilder
 
 class AcronymExpander(dspy.Signature):
     """
@@ -13,16 +14,16 @@ class AcronymExpander(dspy.Signature):
     """
     TEXTO = dspy.InputField()
     ACRONIMO = dspy.InputField()
-    EXPANSION = dspy.OutputField(desc="Expansión del acrónimo, sigla o abreviatura, si es posible expandirlo.")
+    IDIOMA = dspy.InputField()
+    EXPANSION = dspy.OutputField(desc = "Write the expanded acronym in the language {IDIOMA}")
 
 class AcronymExpanderModule(dspy.Module):
-    def __init__(self):
+    def __init__(self, language_detector):
         super().__init__()
         self.expander = dspy.Predict(AcronymExpander)
-        #self.expander = dspy.ChainOfThought(AcronymExpander)
-        
+        self.language_detector = language_detector
         self.no_expansion_variations = [
-            '/', '/ (no hay acrónimos)', '', '${TEXTO}', '${ACRONIMOS}', '/ (no hay expansión)',
+            '/', '/ (no se expande)', '', '${TEXTO}', '${ACRONIMOS}', '/ (no hay expansión)',
             '(no es acronimo)', 'no se puede expandir', '${EXPANSION}',
             '/ (No acronyms present in the document)',
             '/ (not present in the document)', "'/'", 'N/A', '/.', 'N_A', 'NA'
@@ -35,13 +36,26 @@ class AcronymExpanderModule(dspy.Module):
             return expansion
 
     def forward(self, texto, acronimo):
-        response = self.expander(TEXTO=texto, ACRONIMO=acronimo)
-        print("La respuesta es:", response)
-
+        """
+        Detect the language of the text and expand the acronym based on the language detected
+        """
+        idioma = self.language_detector.detect_language(texto)
+        response = self.expander(TEXTO=texto, ACRONIMO=acronimo, IDIOMA=idioma)
         if not response.EXPANSION or response.EXPANSION in self.no_expansion_variations:
             return dspy.Prediction(EXPANSION='/')
         else:   
             return dspy.Prediction(EXPANSION=self._process_output(response.EXPANSION))
+        
+class LanguageDetectorModule:
+    def __init__(self):
+        # Define language of your corpus, the less you choose the faster will be
+        self.languages = [Language.ENGLISH, Language.SPANISH, Language.BASQUE, Language.CATALAN]
+        self.detector = LanguageDetectorBuilder.from_languages(*self.languages).build()
+
+    def detect_language(self, text):
+        detected_languages = self.detector.detect_languages_of(text)
+        # Return language of the text
+        return detected_languages[0].name if detected_languages else 'Indefinido'
 
 class HermesAcronymExpander(object):
 
@@ -75,6 +89,7 @@ class HermesAcronymExpander(object):
             Path to logs directory, by default pathlib.Path(__file__).parent.parent / "data/logs"
         """
         self._logger = logger if logger else init_logger(__name__, path_logs)
+        self.language_detector = LanguageDetectorModule()
         
         if not do_train:
             if not pathlib.Path(trained_promt).exists():
@@ -88,6 +103,9 @@ class HermesAcronymExpander(object):
                 self._logger.error("Data path is required for training. Exiting.")
                 return
             self._train_module(data_path, trained_promt, trf_model)
+        
+        # Inicializa el módulo de detección de idioma
+        self.language_detector = LanguageDetectorModule()
             
     def _train_module(self, data_path, trained_promt, trf_model):
         """
@@ -161,7 +179,7 @@ class HermesAcronymExpander(object):
     
     def optimize_module(self, data_path, max_bootstrapped_demos=4, max_labeled_demos=16, num_candidate_programs=16, max_rounds=1):
         """
-        Optimizes the módulo AcronymExpanderModule based on the data provided.
+        Optimizes the module AcronymExpanderModule based on the data provided.
         """
         # Read data
         df = pd.read_excel(data_path)
