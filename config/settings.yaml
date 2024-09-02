@@ -9,7 +9,7 @@ logger:
 model_type: "hf"  # "hf" for Hugging Face(llama), "openai" for OpenAI
 model_name: "meta-llama/meta-llama-3-8b-instruct"  # O alternativa nombre del modelo que se usará (gpt-4o-2024-05-13)
 # DataFrame Configuration
-data_column_name: "texto_sin_preprocesar"  # Define the column name to read, can be 'text', 'title', 'texto_sin_preprocesar', etc...
+data_column_name: "text"  # Define the column name to read, can be 'text', 'title', 'texto_sin_preprocesar', etc...
 
 # Training Configuration
 train_all_modules: false  # If is true, all modules will be trained, if is false, only the modules in the list modules_to_train will be trained

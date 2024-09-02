@@ -1,11 +1,13 @@
 import pandas as pd
 import dspy
+import copy
 import pathlib
 import logging
 from sklearn.model_selection import train_test_split
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 from dspy.teleprompt import BootstrapFewShotWithRandomSearch
+from dspy.primitives.assertions import DSPySuggestionError
 from lingua import Language, LanguageDetectorBuilder
 
 class AcronymExpander(dspy.Signature):
@@ -34,6 +36,17 @@ class AcronymExpanderModule(dspy.Module):
             return "/"
         else:
             return expansion
+    
+    def verify_expansions(self,acronym,expansion):
+        """
+        Verifiy if the expansion is equal to the acronym.
+        """
+        # Normalizar el acrónimo y la expansión eliminando espacios y convirtiendo a minúsculas
+        acronym_norm = acronym.strip().lower()
+        expansion_norm = expansion.strip().lower()
+
+        # Comparar si la expansión es exactamente igual al acrónimo
+        return expansion_norm == acronym_norm
 
     def forward(self, texto, acronimo):
         """
@@ -41,10 +54,24 @@ class AcronymExpanderModule(dspy.Module):
         """
         idioma = self.language_detector.detect_language(texto)
         response = self.expander(TEXTO=texto, ACRONIMO=acronimo, IDIOMA=idioma)
-        if not response.EXPANSION or response.EXPANSION in self.no_expansion_variations:
+        expansion_generada = response.EXPANSION
+    
+        try:
+            # Usar Suggest para verificar si la expansión es igual al acrónimo
+            dspy.Suggest(
+                self.verify_expansions(acronimo, expansion_generada),
+                "La expansión generada debe coincidir exactamente con el acrónimo.",
+                target_module=AcronymExpander
+            )
+        except DSPySuggestionError as e:
+            print(f"Sugerencia fallida: {e}. Continuando ejecución...")
+        
+        # Verificar si la expansión está en las variaciones que indican no expansión
+        if not expansion_generada or expansion_generada in self.no_expansion_variations:
             return dspy.Prediction(EXPANSION='/')
-        else:   
-            return dspy.Prediction(EXPANSION=self._process_output(response.EXPANSION))
+        else:
+            # Procesar la expansión generada y devolverla
+            return dspy.Prediction(EXPANSION=self._process_output(expansion_generada))
         
 class LanguageDetectorModule:
     def __init__(self):
@@ -53,9 +80,9 @@ class LanguageDetectorModule:
         self.detector = LanguageDetectorBuilder.from_languages(*self.languages).build()
 
     def detect_language(self, text):
-        detected_languages = self.detector.detect_languages_of(text)
+        detected_language = self.detector.detect_language_of(text)
         # Return language of the text
-        return detected_languages[0].name if detected_languages else 'Indefinido'
+        return detected_language.name if detected_language else 'Indefinido'
 
 class HermesAcronymExpander(object):
 
@@ -95,7 +122,7 @@ class HermesAcronymExpander(object):
             if not pathlib.Path(trained_promt).exists():
                 self._logger.error("Trained prompt not found. Exiting.")
                 return
-            self.module = AcronymExpanderModule()
+            self.module = AcronymExpanderModule(language_detector=self.language_detector)
             self.module.load(trained_promt)
             self._logger.info(f"AcronymExpanderModule loaded from {trained_promt}") 
         else:
@@ -103,9 +130,7 @@ class HermesAcronymExpander(object):
                 self._logger.error("Data path is required for training. Exiting.")
                 return
             self._train_module(data_path, trained_promt, trf_model)
-        
-        # Inicializa el módulo de detección de idioma
-        self.language_detector = LanguageDetectorModule()
+      
             
     def _train_module(self, data_path, trained_promt, trf_model):
         """
@@ -128,29 +153,21 @@ class HermesAcronymExpander(object):
         """
         try:
             # Encode the predicted and reference expansions using the transformer model
-            prediction_embedding = self.trf_model.encode(pred.expansion)
-            reference_embedding = self.trf_model.encode(example.expansion_correcta)
-
-            # Log embeddings for debugging purposes
-            self._logger.debug(f"Prediction embedding: {prediction_embedding}")
-            self._logger.debug(f"Reference embedding: {reference_embedding}")
+            prediction_embedding = self.trf_model.encode(str(pred.EXPANSION))
+            reference_embedding = self.trf_model.encode(str(example['expansion']))
 
             # Calculate cosine similarity between embeddings
             similarity = cosine_similarity([prediction_embedding], [reference_embedding])[0][0]
             self._logger.info(f"Cosine similarity: {similarity}")
 
             # Check if the similarity exceeds the threshold (0.7)
-            if similarity > 0.7:
-                return True
-            else:
-                return False
+            return similarity > 0.7
         except Exception as e:
             self._logger.error(f"Error during expansion validation: {e}")
             return False
 
-    def create_dtset_expanded_acronyms(excel_path):
-        # Load the data from the excel file
-        df = pd.read_excel(excel_path)
+    def create_dtset_expanded_acronyms(self, df):
+        
         df = df[['text', 'detected_acr', 'acr_des']]
         df = df[df['detected_acr'] != '/']
         print(len(df))
@@ -185,9 +202,7 @@ class HermesAcronymExpander(object):
         df = pd.read_excel(data_path)
         df = df[['text', 'detected_acr', 'acr_des']]
 
-        examples = self.create_dtset_expanded_acronyms(df)
-
-        tr_ex, test_ex = train_test_split(examples, test_size=0.2, random_state=42)
+        tr_ex, test_ex = self.create_dtset_expanded_acronyms(df)
 
         teleprompter = BootstrapFewShotWithRandomSearch(
             metric=self.validate_expansion,
@@ -197,5 +212,5 @@ class HermesAcronymExpander(object):
             max_rounds=max_rounds,
         )
 
-        compiled_model = teleprompter.compile(AcronymExpanderModule(), trainset=tr_ex, valset=test_ex)
+        compiled_model = teleprompter.compile(AcronymExpanderModule(language_detector=self.language_detector), trainset=tr_ex, valset=test_ex)
         return compiled_model

@@ -40,6 +40,8 @@ matplotlib==3.8.2
 pyLDAvis==3.4.1
 scipy==1.10.1
 openpyxl==3.1.5
+lingua==4.15.0
+lingua-language-detector==2.0.2
 
 # Versión compatible de pydantic
 #pydantic>=1.9.0,<1.11.0

@@ -77,21 +77,23 @@ if __name__ == "__main__":
     # Configuration of dspy backtracking
     dspy.settings.configure(trace=[])
     
-    #@TODO: Create file folder where all excel files will be stored instead of single file.
+    # Initialize the acronym detector and expander    
+    expander = None
+    detector = None
     
     # Decide whether to train based on configuration file and arguments
     do_train = getattr(args, 'do_train', False) or config.get('train_all_modules', False)
     # Get the column name from the configuration
     column_name = config.get('data_column_name', 'text')
     
+    detector = None
+
     if args.action in ["detect", "both"]:
         ########################################
         # Initialize and use HermesAcronymDetector
         ########################################
-
         # Path to trained model json file with dspy
-        trained_promt = pathlib.Path("data/optimized/HermesAcronymDetector-saved.json")
-        
+        trained_promt_detector = pathlib.Path("data/optimized/HermesAcronymDetector-saved.json")
         # Verify if the model should be trained
         should_train = do_train or "HermesAcronymDetector" in (config.get('modules_to_train') or [])
 
@@ -101,48 +103,35 @@ if __name__ == "__main__":
             detector = HermesAcronymDetector(
                 do_train=True,
                 data_path=args.data_path,
-                trained_promt=trained_promt,
+                trained_promt=trained_promt_detector,
                 logger=logger
             )
             # After training, verify if the model was saved correctly
-            if not trained_promt.exists():
-                logger.error(f"El modelo entrenado no se guardó correctamente en {trained_promt}.")
-                raise FileNotFoundError(f"El modelo entrenado no se encuentra en {trained_promt}.")
+            if not trained_promt_detector.exists():
+                logger.error(f"El modelo entrenado no se guardó correctamente en {trained_promt_detector}.")
+                raise FileNotFoundError(f"El modelo entrenado no se encuentra en {trained_promt_detector}.")
         else:
             # Use the pre-trained model
-            if trained_promt.exists():
-                logger.info(f"Cargando AcronymDetectorModule preentrenado desde {trained_promt}...")
-                time.sleep(5)
+            if trained_promt_detector.exists():
+                logger.info(f"Cargando AcronymDetectorModule preentrenado desde {trained_promt_detector}...")
                 detector = HermesAcronymDetector(
                     do_train=False,
                     data_path=args.data_path,
-                    trained_promt=trained_promt,
+                    trained_promt=trained_promt_detector,
                     logger=logger
                 )
             else:
                 # If the model don´t have trained_promt, raise an error
-                logger.error(f"No se encontró el modelo entrenado en {trained_promt}. Considera entrenarlo primero.")
-                raise FileNotFoundError(f"El modelo entrenado no existe en {trained_promt}. Entrena el modelo antes de usarlo.")
+                logger.error(f"No se encontró el modelo entrenado en {trained_promt_detector}. Considera entrenarlo primero.")
+                raise FileNotFoundError(f"El modelo entrenado no existe en {trained_promt_detector}. Entrena el modelo antes de usarlo.")
         
         # Configure the module to use the Retry transformation with a maximum of 2 backtracks
         detector.module = assert_transform_module(
             detector.module.map_named_predictors(dspy.Retry),
             functools.partial(backtrack_handler, max_backtracks=2) 
         )
-        try:
-            df_out = process_dataframe(
-                path=args.data_path,
-                config=config,
-                acronym_detector=detector.module,
-                acronym_expander=None,
-                context_window=args.context_window,
-                max_windows=args.max_windows,
-                window_overlap=args.window_overlap
-            )
-        except Exception as e:
-            logger.error(f"Ocurrió un error al procesar el DataFrame: {str(e)}")
-            raise e
-
+    
+    expander = None
     # @TODO: Update the code of the AcronymExpanderModule
     if args.action in ["expand", "both"]:
         ########################################
@@ -150,62 +139,76 @@ if __name__ == "__main__":
         ########################################
         # Verify if the model should be trained
         should_train = do_train or "HermesAcronymExpander" in (config.get('modules_to_train') or [])
+        
+        # Path to trained model json file with dspy
+        trained_promt_expander = pathlib.Path("data/optimized/HermesAcronymExpander-saved.json")
 
         if should_train:
             # Train the model
             logger.info("Entrenando y usando HermesAcronymExpander...")
-            detector = HermesAcronymExpander(
+            expander = HermesAcronymExpander(
                 do_train=True,
                 data_path=args.data_path,
-                trained_promt=trained_promt,
+                trained_promt=trained_promt_expander,
                 logger=logger
             )
             # After training, verify if the model was saved correctly
-            if not trained_promt.exists():
-                logger.error(f"El modelo entrenado no se guardó correctamente en {trained_promt}.")
-                raise FileNotFoundError(f"El modelo entrenado no se encuentra en {trained_promt}.")
+            if not trained_promt_expander.exists():
+                logger.error(f"El modelo entrenado no se guardó correctamente en {trained_promt_expander}.")
+                raise FileNotFoundError(f"El modelo entrenado no se encuentra en {trained_promt_expander}.")
         else:
             # Use the pre-trained model
-            if trained_promt.exists():
-                logger.info(f"Cargando AcronymExpanderModule preentrenado desde {trained_promt}...")
-                time.sleep(5)
+            if trained_promt_expander.exists():
+                logger.info(f"Cargando AcronymExpanderModule preentrenado desde {trained_promt_expander}...")
                 expander = HermesAcronymExpander(
                     do_train=False,
                     data_path=args.data_path,
-                    trained_promt=trained_promt,
+                    trained_promt=trained_promt_expander,
                     logger=logger
                 )
             else:
                 # If the model don´t have trained_promt, raise an error
-                logger.error(f"No se encontró el modelo entrenado en {trained_promt}. Considera entrenarlo primero.")
-                raise FileNotFoundError(f"El modelo entrenado no existe en {trained_promt}. Entrena el modelo antes de usarlo.")
+                logger.error(f"No se encontró el modelo entrenado en {trained_promt_expander}. Considera entrenarlo primero.")
+                raise FileNotFoundError(f"El modelo entrenado no existe en {trained_promt_expander}. Entrena el modelo antes de usarlo.")
         
         # Configure the module to use the Retry transformation with a maximum of 2 backtracks
         expander.module = assert_transform_module(
             expander.module.map_named_predictors(dspy.Retry),
             functools.partial(backtrack_handler, max_backtracks=2) 
         )
+        
         try:
             df_out = process_dataframe(
                 path=args.data_path,
                 config=config,
-                acronym_detector=None,
-                acronym_expander= expander.module,
+                action=args.action,
+                acronym_detector=detector.module if detector else None,
+                acronym_expander=expander.module if expander else None,
                 context_window=args.context_window,
                 max_windows=args.max_windows,
-                window_overlap=args.window_overlap
+                window_overlap=args.window_overlap,
+                logger=logger
             )
         except Exception as e:
             logger.error(f"Ocurrió un error al procesar el DataFrame: {str(e)}")
             raise e
         
-
     # Save df in a new Excel file with the same name as the input file plus '_out'
+    if args.action == "detect":
+        suffix = "_detect"
+    elif args.action == "expand":
+        suffix = "_expand"
+    elif args.action == "both":
+        suffix = "_both"
+    else:
+        suffix = "_out"  
+
+    # Save the processed DataFrame to an Excel file
     path = pathlib.Path(args.data_path)
-    path_out = path.with_stem(path.stem + '_out').with_suffix('.xlsx')
+    path_out = path.with_stem(path.stem + suffix).with_suffix('.xlsx')
     df_out.to_excel(path_out, index=False)
-    logger.info(f"DataFrame procesado y guardado en {path_out}")
-    
+    # Report the path of the saved file
+    logger.info(f"DataFrame procesado con la acción '{args.action}' y guardado en {path_out}")
     
     #my_acronym_expander = AcronymExpanderModule()
     #texto="Ejemplo de texto para pib de la sociedad española de la federación de empresarios agrarios"
