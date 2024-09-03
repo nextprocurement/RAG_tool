@@ -7,8 +7,8 @@ import yaml
 import logging
 from time import sleep
 from nltk.tokenize import sent_tokenize
-from src.acronyms_dspy.acronym_detector import AcronymDetectorModule
-from src.acronyms_dspy.acronym_expander import AcronymExpanderModule
+from src.acronyms.acronym_detector import AcronymDetectorModule
+from src.acronyms.acronym_expander import AcronymExpanderModule
 from src.utils.vector_store_utils import Chunker
 
 def process_dataframe(
