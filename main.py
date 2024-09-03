@@ -87,7 +87,6 @@ if __name__ == "__main__":
     column_name = config.get('data_column_name', 'text')
     
     detector = None
-
     if args.action in ["detect", "both"]:
         ########################################
         # Initialize and use HermesAcronymDetector
@@ -106,6 +105,13 @@ if __name__ == "__main__":
                 trained_promt=trained_promt_detector,
                 logger=logger
             )
+            '''
+            # Configure the module to use the Retry transformation with a maximum of 2 backtracks
+            detector.module = assert_transform_module(
+                detector.module.map_named_predictors(dspy.Retry),
+                functools.partial(backtrack_handler, max_backtracks=5) 
+            )
+            '''
             # After training, verify if the model was saved correctly
             if not trained_promt_detector.exists():
                 logger.error(f"El modelo entrenado no se guardó correctamente en {trained_promt_detector}.")
@@ -120,19 +126,18 @@ if __name__ == "__main__":
                     trained_promt=trained_promt_detector,
                     logger=logger
                 )
+                '''
+                detector.module = assert_transform_module(
+                    detector.module.map_named_predictors(dspy.Retry),
+                    functools.partial(backtrack_handler, max_backtracks=2) 
+                )
+                '''
             else:
                 # If the model don´t have trained_promt, raise an error
                 logger.error(f"No se encontró el modelo entrenado en {trained_promt_detector}. Considera entrenarlo primero.")
                 raise FileNotFoundError(f"El modelo entrenado no existe en {trained_promt_detector}. Entrena el modelo antes de usarlo.")
-        
-        # Configure the module to use the Retry transformation with a maximum of 2 backtracks
-        detector.module = assert_transform_module(
-            detector.module.map_named_predictors(dspy.Retry),
-            functools.partial(backtrack_handler, max_backtracks=2) 
-        )
-    
+             
     expander = None
-    # @TODO: Update the code of the AcronymExpanderModule
     if args.action in ["expand", "both"]:
         ########################################
         # Initialize and use HermesAcronymExpander
@@ -152,6 +157,13 @@ if __name__ == "__main__":
                 trained_promt=trained_promt_expander,
                 logger=logger
             )
+            '''
+            # Configure the module to use the Retry transformation with a maximum of 2 backtracks
+            expander.module = assert_transform_module(
+                expander.module.map_named_predictors(dspy.Retry),
+                functools.partial(backtrack_handler, max_backtracks=2) 
+            )
+            '''
             # After training, verify if the model was saved correctly
             if not trained_promt_expander.exists():
                 logger.error(f"El modelo entrenado no se guardó correctamente en {trained_promt_expander}.")
@@ -166,32 +178,34 @@ if __name__ == "__main__":
                     trained_promt=trained_promt_expander,
                     logger=logger
                 )
+                '''
+                # Configure the module to use the Retry transformation with a maximum of 2 backtracks
+                expander.module = assert_transform_module(
+                    expander.module.map_named_predictors(dspy.Retry),
+                    functools.partial(backtrack_handler, max_backtracks=2) 
+                )
+                '''
             else:
                 # If the model don´t have trained_promt, raise an error
                 logger.error(f"No se encontró el modelo entrenado en {trained_promt_expander}. Considera entrenarlo primero.")
                 raise FileNotFoundError(f"El modelo entrenado no existe en {trained_promt_expander}. Entrena el modelo antes de usarlo.")
         
-        # Configure the module to use the Retry transformation with a maximum of 2 backtracks
-        expander.module = assert_transform_module(
-            expander.module.map_named_predictors(dspy.Retry),
-            functools.partial(backtrack_handler, max_backtracks=2) 
+    # Process the DataFrame
+    try:
+        df_out = process_dataframe(
+            path=args.data_path,
+            config=config,
+            action=args.action,
+            acronym_detector=detector.module if detector else None,
+            acronym_expander=expander.module if expander else None,
+            context_window=args.context_window,
+            max_windows=args.max_windows,
+            window_overlap=args.window_overlap,
+            logger=logger
         )
-        
-        try:
-            df_out = process_dataframe(
-                path=args.data_path,
-                config=config,
-                action=args.action,
-                acronym_detector=detector.module if detector else None,
-                acronym_expander=expander.module if expander else None,
-                context_window=args.context_window,
-                max_windows=args.max_windows,
-                window_overlap=args.window_overlap,
-                logger=logger
-            )
-        except Exception as e:
-            logger.error(f"Ocurrió un error al procesar el DataFrame: {str(e)}")
-            raise e
+    except Exception as e:
+        logger.error(f"Ocurrió un error al procesar el DataFrame: {str(e)}")
+        raise e
         
     # Save df in a new Excel file with the same name as the input file plus '_out'
     if args.action == "detect":
@@ -209,13 +223,3 @@ if __name__ == "__main__":
     df_out.to_excel(path_out, index=False)
     # Report the path of the saved file
     logger.info(f"DataFrame procesado con la acción '{args.action}' y guardado en {path_out}")
-    
-    #my_acronym_expander = AcronymExpanderModule()
-    #texto="Ejemplo de texto para pib de la sociedad española de la federación de empresarios agrarios"
-    #acronimo="pib"
-    # Uso del módulo
-    #my_acronym_expander = AcronymExpanderModule()
-    #result = my_acronym_expander(texto,acronimo)
-    #print("Resultado:", result)
-    # Ahora se puede usar el expansor para expandir acrónimos
-    #expander.module(texto="Quiero participar en una ONG porque quiero ser caritativa", acronimo="ONG")

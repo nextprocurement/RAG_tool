@@ -39,33 +39,33 @@ class AcronymDetectorModule(dspy.Module):
     
     def verify_acronyms(self, texto, acronyms):
         """
-        Verify if all acronyms are present in the text.
+        Verify if all acronyms are present in the text
         Used to suggest a condition in the teleprompter.
         """
         # Normalize text and acronyms to lowercase and split into words
         text_norm = texto.lower().split()
         acronyms_norm = [acronym.strip().lower() for acronym in acronyms.split(',')]
-
+        
         # Verify presence of acronyms in text
-        resultados_presencia = [acronym in text_norm for acronym in acronyms_norm]
+        results = [acronym in text_norm for acronym in acronyms_norm]
 
         # Return True if all acronyms are present in the text
-        return all(resultados_presencia)
+        return all(results)
     
     def forward(self, texto):
         response = self.generator(TEXT=texto)
         acronyms = response.ACRONYMS
-    
-        try:
-            # Suggestions with error handling
-            dspy.Suggest(
-                self.verify_acronyms(texto, acronyms),
-                "Los acrónimos deben coincidir con las palabras del texto en minúsculas.",
-                target_module=AcronymDetector
-            )
-        except DSPySuggestionError as e:
-            print(f"Sugerencia fallida: {e}. Continuando ejecución...")
-        
+        '''
+        #try:
+        # Suggestions with error handling
+        dspy.Suggest(
+           not self.verify_acronyms(texto, acronyms),
+            "Los acrónimos deben coincidir con las palabras del texto en minúsculas.",
+            target_module=AcronymDetector
+        )
+        #except DSPySuggestionError as e:
+        #    print(f"Sugerencia fallida: {e}. Continuando ejecución...")
+        '''
         if len(texto) == len(acronyms) or texto == acronyms:
             return dspy.Prediction(ACRONYMS='/')
         else:

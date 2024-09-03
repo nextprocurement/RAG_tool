@@ -3,6 +3,7 @@ import dspy
 import copy
 import pathlib
 import logging
+from time import sleep
 from sklearn.model_selection import train_test_split
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -37,40 +38,38 @@ class AcronymExpanderModule(dspy.Module):
         else:
             return expansion
     
-    def verify_expansions(self,acronym,expansion):
+    def verify_expansions(self, acronym, expansion):
         """
         Verifiy if the expansion is equal to the acronym.
         """
-        # Normalizar el acrónimo y la expansión eliminando espacios y convirtiendo a minúsculas
+        # Normalize acronym and expansion to lowercase
         acronym_norm = acronym.strip().lower()
         expansion_norm = expansion.strip().lower()
-
-        # Comparar si la expansión es exactamente igual al acrónimo
         return expansion_norm == acronym_norm
 
     def forward(self, texto, acronimo):
         """
-        Detect the language of the text and expand the acronym based on the language detected
+        Expand the acronym based on the language detected of the text.
         """
         idioma = self.language_detector.detect_language(texto)
         response = self.expander(TEXTO=texto, ACRONIMO=acronimo, IDIOMA=idioma)
         expansion_generada = response.EXPANSION
-    
-        try:
-            # Usar Suggest para verificar si la expansión es igual al acrónimo
-            dspy.Suggest(
-                self.verify_expansions(acronimo, expansion_generada),
-                "La expansión generada debe coincidir exactamente con el acrónimo.",
-                target_module=AcronymExpander
+        '''
+        #try:
+        # Suggest to verify if the expansion is equal to the acronym
+        dspy.Suggest(
+            not self.verify_expansions(acronimo, expansion_generada),
+            "La expansión generada no debe coincidir exactamente con el acrónimo.",
+            target_module=AcronymExpander
             )
-        except DSPySuggestionError as e:
-            print(f"Sugerencia fallida: {e}. Continuando ejecución...")
-        
-        # Verificar si la expansión está en las variaciones que indican no expansión
+        #except DSPySuggestionError as e:
+        #    print(f"Sugerencia fallida: {e}. Continuando ejecución...")
+        '''
+        # Verify if the expansion is not empty or a placeholder
         if not expansion_generada or expansion_generada in self.no_expansion_variations:
             return dspy.Prediction(EXPANSION='/')
         else:
-            # Procesar la expansión generada y devolverla
+            # Process the expansion output
             return dspy.Prediction(EXPANSION=self._process_output(expansion_generada))
         
 class LanguageDetectorModule:
@@ -81,6 +80,8 @@ class LanguageDetectorModule:
 
     def detect_language(self, text):
         detected_language = self.detector.detect_language_of(text)
+        print("Detected language is:",detected_language)
+        sleep(5)
         # Return language of the text
         return detected_language.name if detected_language else 'Indefinido'
 
