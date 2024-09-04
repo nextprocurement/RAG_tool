@@ -1,23 +1,17 @@
+# Paquetes de spaCy necesarios
+# Indicaciones para descargar modelos después de instalar spaCy
+# python -m spacy download es_core_news_md
+# python -m spacy download en_core_web_md
+# python -m spacy download ca_core_news_md
+
 # Principales bibliotecas para el manejo de dataframes y procesamiento de datos
 pandas==2.2.2
 scikit-learn==1.5.1
-
-# Bibliotecas para el manejo de modelos de lenguaje
 dspy==0.1.5
-
-# Biblioteca para modelos preentrenados de Hugging Face
 transformers==4.44.2
-
-# Biblioteca para manejar archivos .env
 python-dotenv==1.0.1
-
-# Biblioteca para leer archivos YAML
 PyYAML==6.0
-
-# Biblioteca para manejar argumentos de línea de comandos
 argparse==1.4.0
-
-# Otras bibliotecas específicas que podrías necesitar:
 bertopic==0.14.1
 pybind11==2.11.1
 fasttext-wheel==0.9.2

@@ -10,6 +10,7 @@ from nltk.tokenize import sent_tokenize
 from src.acronyms.acronym_detector import AcronymDetectorModule
 from src.acronyms.acronym_expander import AcronymExpanderModule
 from src.utils.vector_store_utils import Chunker
+from src.acronyms.check_candidate import NERTextAnalyzer
 
 def process_dataframe(
     path,
@@ -40,6 +41,9 @@ def process_dataframe(
     Returns:
     - df: Processed DataFrame with detected and/or expanded acronyms.
     """
+    # Initialize NERTextAnalyzer
+    ner_analyzer = NERTextAnalyzer()
+    
     # Obtain the column name from the configuration file
     column_name = config.get('data_column_name', 'text')
 
@@ -74,28 +78,46 @@ def process_dataframe(
         if action in ["detect", "both"] and acronym_detector:
             for id_chunk, chunk in chunker(text):  
                 prediction = acronym_detector.forward(chunk)
-                print("ACRONYMS BEFORE FILTER AND CLEAN:", prediction.ACRONYMS)
-                sleep(3)
                 acronyms = clean_acronyms(prediction.ACRONYMS)
                 acronyms_list = acronyms.lower().split(',')
-                print("ACRONYMS BEFORE FILTER:", acronyms_list)
-                sleep(3)
+                print("ACRONYMS DETECTED DETECTOR MODULE:", acronyms_list)
+                sleep(2)
 
                 # Filter detected acronyms
                 detected_acronyms.update(acronym.strip() for acronym in acronyms_list)
                 
+                if not detected_acronyms or '/' in detected_acronyms:
+                    print(f"No acronyms in row {identifier}, continue the loop.")
+                    df.at[identifier, 'Acronyms Detected(LLM)'] = '/'
+                    continue
+                    
                 # Apply filters to the detected acronyms
                 detected_acronyms = filter_split_characters(detected_acronyms)
+                print(f"ACRONYMS AFTER filter_split_characters: {detected_acronyms}")
                 detected_acronyms = filter_items_and_acronyms(detected_acronyms)
+                print(f"ACRONYMS AFTER filter_items_and_acronyms: {detected_acronyms}")
                 detected_acronyms = filter_companies(detected_acronyms)
+                print(f"ACRONYMS AFTER filter_companies: {detected_acronyms}")
                 detected_acronyms = filter_acronyms_in_text(text, detected_acronyms)
+                print(f"ACRONYMS AFTER filter_acronyms_in_text: {detected_acronyms}")
+                sleep(2)
 
-                if not detected_acronyms:
+                if not detected_acronyms or '/' in detected_acronyms:
                     print(f"No acronyms AFTER FILTERING in row {identifier}, continue the loop.")
+                    sleep(2)
                     df.at[identifier, 'Acronyms Detected(LLM)'] = '/'
                     continue
                 
-                print("ACRONYMS AFTER FILTER: ", detected_acronyms)
+                # Convert set to list for NER analysis
+                detected_acronyms_list = list(detected_acronyms)
+                print(f"ACRONYMS BEFORE NER FILTERING: {detected_acronyms_list}")
+                
+                # Analyze acronyms using NERTextAnalyzer
+                analysis_result = ner_analyzer.analyze_text(text, detected_acronyms_list)
+                detected_acronyms = {info['text'].lower() for info in analysis_result['words']}
+                print(f"Acronyms after ner: {detected_acronyms}")
+                sleep(1)
+                                
                 # Update the DataFrame with the detected acronyms
                 df.at[identifier, 'Acronyms Detected(LLM)'] = ', '.join(detected_acronyms)
 
@@ -106,14 +128,13 @@ def process_dataframe(
                     logger.error("Column 'Acronyms Detected(LLM)' does not exists in DataFrame. Cannot apply expansion before detection!.")
                     continue
             
-            # Access the updated value directly from the DataFrame using .loc
-            acronyms_detected = df.loc[identifier, 'Acronyms Detected(LLM)']
+            acronyms_detected = df.at[identifier, 'Acronyms Detected(LLM)']
             print(f"ACRONYMS DETECTED IN ROW {identifier}: {acronyms_detected}")
-            sleep(10)
 
             # Skip the row if acronyms are not detected or contain '/' or are empty
             if acronyms_detected in ['/', '']:
                 logger.error(f"No acronyms detected in the row {identifier}. Expansion cannot be applied.")
+                df.at[identifier, 'Expansions'] = '/'
                 continue
 
             detected_acronyms = set(acronym.strip() for acronym in acronyms_detected.split(','))
@@ -126,11 +147,11 @@ def process_dataframe(
                     expansion_response = acronym_expander.forward(texto=text, acronimo=acronym)
                     expansion = expansion_response.EXPANSION
                     print(f"EXPANSION FOR ACRONYM {acronym}: {expansion}")
-                    sleep(10)
                     expansions.append(expansion)
                       
                 except Exception as e:
                     logger.error(f"Error expanding {acronym} in row {identifier}: {e}")
+                    sleep(30)
 
             # Update the DataFrame with the expansions for each row
             df.at[identifier, 'Expansions'] = ', '.join(expansions)
@@ -168,16 +189,25 @@ def filter_acronyms_in_text(text, acronyms):
     '''
     text_lower = text.lower()
     # Find all acronyms enclosed in parentheses
-    acronyms_in_parentheses = re.findall(r'\(([^)]+)\)', text)
+    acronyms_in_parentheses = re.findall(r'\(([^)]+)\)', text_lower)
     # Flatten the list of acronyms found in parentheses and convert to lowercase
     acronyms_in_parentheses = [acronym.lower() for group in acronyms_in_parentheses for acronym in group.split()]
-    
-    # Filter acronyms based on their presence in the text, excluding those in parentheses
-    filtered_acronyms = [
-        acronym for acronym in acronyms
-        if acronym.lower() in text_lower.split() or acronym.lower() in acronyms_in_parentheses
-    ]
-    # Return the filtered list of acronyms or '/' if none are found
+
+    filtered_acronyms = []
+    # Iterate through each acronym and check if it exists in the text
+    for acronym in acronyms:
+        acronym_lower = acronym.lower()
+        # Define patterns to match the acronym with potential surrounding punctuation
+        patterns = [
+            rf'\b{re.escape(acronym_lower)}\b',  # Exact match
+            rf'\b{re.escape(acronym_lower)}[.,;:!?]',  # Acronym followed by punctuation
+            rf'[.,;:!?]{re.escape(acronym_lower)}\b',  # Acronym preceded by punctuation
+            rf'{re.escape(acronym_lower)}'  # General match anywhere in the text
+        ]
+        # Check if the acronym appears in the text or in acronyms found in parentheses
+        if any(re.search(pattern, text_lower) for pattern in patterns) or acronym_lower in acronyms_in_parentheses:
+            filtered_acronyms.append(acronym)
+
     return filtered_acronyms if filtered_acronyms else '/'
 
 def filter_companies(acronyms):

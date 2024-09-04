@@ -4,14 +4,14 @@ import os
 import time
 import yaml
 import dspy
-from src.utils.utils import *
 from dotenv import load_dotenv
 from src.utils.utils import init_logger
+from src.utils.utils import process_dataframe
 from src.utils.vector_store_utils import Chunker
 from dspy.primitives.assertions import assert_transform_module, backtrack_handler
 import functools
-from src.acronyms_dspy.acronym_expander import HermesAcronymExpander, AcronymExpanderModule
-from src.acronyms_dspy.acronym_detector import HermesAcronymDetector, AcronymDetectorModule
+from src.acronyms.acronym_expander import HermesAcronymExpander, AcronymExpanderModule
+from src.acronyms.acronym_detector import HermesAcronymDetector, AcronymDetectorModule
 
 
 def load_config(config_path):

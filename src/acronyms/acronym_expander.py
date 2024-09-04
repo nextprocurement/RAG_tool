@@ -3,6 +3,7 @@ import dspy
 import copy
 import pathlib
 import logging
+import unidecode
 from time import sleep
 from sklearn.model_selection import train_test_split
 from sentence_transformers import SentenceTransformer
@@ -11,24 +12,25 @@ from dspy.teleprompt import BootstrapFewShotWithRandomSearch
 from dspy.primitives.assertions import DSPySuggestionError
 from lingua import Language, LanguageDetectorBuilder
 
+
 class AcronymExpander(dspy.Signature):
     """
     Expand the acronyms based on the text.
     """
-    TEXTO = dspy.InputField()
-    ACRONIMO = dspy.InputField()
-    IDIOMA = dspy.InputField()
-    EXPANSION = dspy.OutputField(desc = "Write the expanded acronym in the language {IDIOMA}")
+    TEXT = dspy.InputField()
+    ACRONYMS = dspy.InputField()
+    LANGUAGE = dspy.InputField()
+    EXPANSION = dspy.OutputField(desc = "Write the expanded acronym in the language {LANGUAGE}")
 
 class AcronymExpanderModule(dspy.Module):
-    def __init__(self, language_detector):
+    def __init__(self):
         super().__init__()
         self.expander = dspy.Predict(AcronymExpander)
-        self.language_detector = language_detector
+        #self.language_detector = language_detector
         self.no_expansion_variations = [
             '/', '/ (no se expande)', '', '${TEXTO}', '${ACRONIMOS}', '/ (no hay expansión)',
-            '(no es acronimo)', 'no se puede expandir', '${EXPANSION}',
-            '/ (No acronyms present in the document)',
+            '(no es acronimo)', 'no se puede expandir', '${EXPANSION}', '${ACRONYMS}', '${ACRONYM}',
+            '/ (No acronyms present in the document)', 'TEXT', '${TEXT}', '  ',
             '/ (not present in the document)', "'/'", 'N/A', '/.', 'N_A', 'NA'
         ]
         
@@ -37,6 +39,16 @@ class AcronymExpanderModule(dspy.Module):
             return "/"
         else:
             return expansion
+    
+    def normalize_text(self, text):
+        """
+        Normalize text by converting to lowercase, removing accents and punctuation.
+        """
+        # Convert to lowercase and remove accents
+        text = unidecode.unidecode(text.lower())
+        # Remove common punctuation marks
+        text = ''.join(char for char in text if char.isalnum() or char.isspace())
+        return text
     
     def verify_expansions(self, acronym, expansion):
         """
@@ -51,26 +63,34 @@ class AcronymExpanderModule(dspy.Module):
         """
         Expand the acronym based on the language detected of the text.
         """
-        idioma = self.language_detector.detect_language(texto)
-        response = self.expander(TEXTO=texto, ACRONIMO=acronimo, IDIOMA=idioma)
+        language_detector = LanguageDetectorModule()
+        idioma = language_detector.detect_language(texto)
+        response = self.expander(TEXT=texto, ACRONYMS=acronimo, LANGUAGE=idioma)
         expansion_generada = response.EXPANSION
         '''
         #try:
         # Suggest to verify if the expansion is equal to the acronym
         dspy.Suggest(
             not self.verify_expansions(acronimo, expansion_generada),
-            "La expansión generada no debe coincidir exactamente con el acrónimo.",
+            "Expansion generated is equal to the acronym",
             target_module=AcronymExpander
             )
         #except DSPySuggestionError as e:
-        #    print(f"Sugerencia fallida: {e}. Continuando ejecución...")
+        #    print(f"Suggestion failure: {e}. Execution keep going...")
         '''
+        normalized_expansion = self.normalize_text(expansion_generada)
+        normalized_acronym = self.normalize_text(acronimo)
+
+        # Check if the normalized expansion is identical to the acronym
+        if normalized_expansion == normalized_acronym:
+            print("EXPANSION GENERATED IS EQUAL TO THE ACRONYM!!!")
+            print('*'*50)
+            return dspy.Prediction(EXPANSION='/')
         # Verify if the expansion is not empty or a placeholder
         if not expansion_generada or expansion_generada in self.no_expansion_variations:
             return dspy.Prediction(EXPANSION='/')
-        else:
-            # Process the expansion output
-            return dspy.Prediction(EXPANSION=self._process_output(expansion_generada))
+        # Process the expansion output
+        return dspy.Prediction(EXPANSION=self._process_output(expansion_generada))
         
 class LanguageDetectorModule:
     def __init__(self):
@@ -80,8 +100,6 @@ class LanguageDetectorModule:
 
     def detect_language(self, text):
         detected_language = self.detector.detect_language_of(text)
-        print("Detected language is:",detected_language)
-        sleep(5)
         # Return language of the text
         return detected_language.name if detected_language else 'Indefinido'
 
@@ -143,6 +161,11 @@ class HermesAcronymExpander(object):
         self.module = self.optimize_module(data_path)
         self._logger.info("AcronymExpanderModule optimized.")
         self.module.save(trained_promt)
+    
+    def language_to_string(language):
+        if isinstance(language, Language):
+            return language.name
+        return str(language)
 
     def validate_expansion(self, example, pred, trace=None):
         """
@@ -171,7 +194,7 @@ class HermesAcronymExpander(object):
         
         df = df[['text', 'detected_acr', 'acr_des']]
         df = df[df['detected_acr'] != '/']
-        print(len(df))
+        #print(len(df))
 
         # Dividir los datos en conjuntos de entrenamiento y validación
         train_df, test_df = train_test_split(df, test_size=0.3, random_state=42)
@@ -213,5 +236,9 @@ class HermesAcronymExpander(object):
             max_rounds=max_rounds,
         )
 
-        compiled_model = teleprompter.compile(AcronymExpanderModule(language_detector=self.language_detector), trainset=tr_ex, valset=test_ex)
+        compiled_model = teleprompter.compile(
+            AcronymExpanderModule(),
+            trainset=tr_ex,
+            valset=test_ex)
+        
         return compiled_model

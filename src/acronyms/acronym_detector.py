@@ -191,6 +191,10 @@ class HermesAcronymDetector:
             num_candidate_programs=num_candidate_programs,
             max_rounds=max_rounds,
         )
-        compiled_model = teleprompter.compile(AcronymDetectorModule(), trainset=tr_ex, valset=test_ex)
+        compiled_model = teleprompter.compile(
+            AcronymDetectorModule(),
+            trainset=tr_ex,
+            valset=test_ex
+        )
         return compiled_model
     
