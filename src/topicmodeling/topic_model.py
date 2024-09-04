@@ -8,6 +8,7 @@ import sys
 from abc import ABC, abstractmethod
 from multiprocessing import freeze_support
 from subprocess import check_output
+import time
 from typing import Dict, List, Tuple, Union
 import openai
 
@@ -32,7 +33,7 @@ from spacy.lang.en.stop_words import STOP_WORDS
 from tqdm import tqdm
 from umap import UMAP
 
-from src.topicmodeling.utils import (file_lines, load_processed_data, pickler,
+from src.topicmodeling.utils import (file_lines, load_processed_data, pickler, tkz_clean_str,
                                       unpickler)
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -162,17 +163,75 @@ class TopicModel(ABC):
     def train(
         self,
         get_embeddings: bool = False,
-        get_preprocessed: bool = True
+        get_preprocessed: bool = True,
+        further_proc: bool = True,
+        min_lemas: int = 3,
+        no_below: int = 10,
+        no_above: float = 0.6, 
+        keep_n: int = 100000
     ) -> None:
         """
         Train the topic model and save the data to save_data_path
         Here, at the parent class, we load the processed data and initialize the save_path. The actual training is done in the child classes.
+        
+        
+        min_lemas: int
+            Minimum number of lemas for document filtering
+        no_below: int
+            Minimum number of documents to keep a term in the vocabulary
+        no_above: float
+            Maximum proportion of documents to keep a term in the vocab
+        keep_n: int
+            Maximum vocabulary size
+        cntVecModel : pyspark.ml.feature.CountVectorizerModel
+            CountVectorizer Model to be used for the BOW calculation
         """
 
         # Load the processed data
-        # df is a pandas DataFrame with columns:
-        # 'text', 'label', 'sub_labels', 'lemmas'
+        
+        # Check if data with additional preprocessing already exists
+        preproc_file = pathlib.Path(self.save_path.as_posix()).joinpath(pathlib.Path(self.load_data_path).stem + "_preproc.parquet")
         df = load_processed_data(self.load_data_path)
+        
+        if further_proc: # remove add stops and equivs
+            start_time = time.time()
+            self._logger.info(f"-- -- Applying further processing to the data")
+            df['lemmas'] = df['lemmas'].apply(tkz_clean_str)
+            self._logger.info(f"-- -- Further processing done in {(time.time() - start_time) / 60} minutes. Saving to {preproc_file}")
+        
+        # filter extrems
+        self._logger.info(f"-- -- Filtering out documents with less than {min_lemas} lemas")
+        df["n_tokens"] = df["lemmas"].apply(lambda x : len(x.split()))
+        len_df = len(df)
+        df = df[df["n_tokens"] >= min_lemas]
+        self._logger.info(f"-- -- Filtered out {len_df - len(df)} documents with less than {min_lemas} lemas")
+        
+        # Gensim filtering
+        self._logger.info(f"-- -- Filtering out vocabulary with no_below={no_below}, no_above={no_above}, keep_n={keep_n}")
+        final_tokens = [el.split() for el in df['lemmas'].values.tolist()]
+        dict = corpora.Dictionary(final_tokens)
+        dict.filter_extremes(
+            no_below=no_below,
+            no_above=no_above, 
+            keep_n=keep_n
+        )
+        vocabulary = set([dict[idx] for idx in range(len(dict))])
+        self._logger.info(f"-- -- Vocabulary size: {len(vocabulary)}")
+        
+        df["lemmas"] = df['lemmas'].apply(lambda x: ' '.join([el for el in x.split() if el in vocabulary]))
+        
+        # Save Gensim dictionary
+        self._logger.info(f"-- -- Saving Gensim dictionary")
+        GensimFile = self.save_path.joinpath('dictionary.gensim')
+        if GensimFile.is_file():
+            GensimFile.unlink()
+        dict.save_as_text(GensimFile)
+        with self.save_path.joinpath('vocabulary.txt').open('w', encoding='utf8') as fout:
+            fout.write(
+                '\n'.join([dict[idx] for idx in range(len(dict))]))
+            
+        df.to_parquet(preproc_file)
+        
         self.df = df
 
         if get_preprocessed:
@@ -321,7 +380,10 @@ class TopicModel(ABC):
                 dictionary=dictionary,
                 coherence=metric
             )
-            return coherence_model.get_coherence()
+            try:
+                return coherence_model.get_coherence()
+            except Exception as e:
+                import pdb; pdb.set_trace()
 
         if all:
             return {
@@ -710,7 +772,12 @@ class MalletLdaModel(TopicModel):
         wdt = self.get_word_topic_distribution()
         topics = self.print_topics(verbose=False)
         topics_ = [topics[k] for k in topics.keys()]
-        metrics = self.get_coherence(self.train_data, topics_, all=True)
+        metrics = {
+                'c_v': 0,
+                'c_uci': 0,
+                'c_npmi': 0
+            }
+        #self.get_coherence(self.train_data, topics_, all=True)
         self._logger.info(
             f"-- -- Coherence metrics: {metrics}"
         )

@@ -70,7 +70,7 @@ def main():
     args = argparser.parse_args()
     
     if args.model_type == 'all':
-        for model_type in ['TopicGPT','MalletLda', 'Ctm', 'BERTopic']:
+        for model_type in ["MalletLda"]: #['TopicGPT','MalletLda', 'Ctm', 'BERTopic']:
             
             model_path = pathlib.Path(args.model_path) / f"{model_type}_{args.num_topics}"
             print(f"-- -- Training model of type {model_type} at {model_path}...")

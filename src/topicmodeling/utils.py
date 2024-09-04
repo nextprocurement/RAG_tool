@@ -1,3 +1,5 @@
+import json
+import pathlib
 import pickle
 
 import pandas as pd
@@ -44,3 +46,91 @@ def file_lines(fname):
         for i, l in enumerate(f):
             pass
     return i + 1
+
+def tkz_clean_str(
+    rawtext,
+    stops_path="src/topicmodeling/data/stops",
+    eqs_path="src/topicmodeling/data/equivalences"
+):
+    """Function to carry out tokenization and cleaning of text
+
+    Parameters
+    ----------
+    rawtext: str
+        string with the text to lemmatize
+
+    Returns
+    -------
+    cleantxt: str
+        Cleaned text
+    """
+    
+    def _loadSTW(stops_path):
+        """
+        Loads all stopwords from all files provided in the argument
+
+        Parameters
+        ----------
+        stw_files: list of str
+            List of paths to stopwords files
+
+        Returns
+        -------
+        stopWords: list of str
+            List of stopwords
+        """
+
+        stw_files = pathlib.Path(stops_path).rglob('*')
+        stopWords = []
+        for stwFile in stw_files:
+            with stwFile.open('r', encoding='utf8') as fin:
+                stopWords += json.load(fin)['wordlist']
+
+        return list(set(stopWords))
+
+    def _loadEQ(eqs_path):
+        """
+        Loads all equivalent terms from all files provided in the argument
+
+        Parameters
+        ----------
+        eq_files: list of str
+            List of paths to equivalent terms files
+
+        Returns
+        -------
+        equivalents: dictionary
+            Dictionary of term_to_replace -> new_term
+        """
+
+        eq_files = pathlib.Path(eqs_path).rglob('*')
+        equivalent = {}
+        for eqFile in eq_files:
+            with eqFile.open('r', encoding='utf8') as fin:
+                newEq = json.load(fin)['wordlist']
+            newEq = [x.split(':') for x in newEq]
+            newEq = [x for x in newEq if len(x) == 2]
+            newEq = dict(newEq)
+            equivalent = {**equivalent, **newEq}
+
+        return equivalent
+    
+    stopwords = _loadSTW(stops_path=stops_path)
+    equivalences = _loadEQ(eqs_path=eqs_path)
+    
+    if rawtext == None or rawtext == '':
+        return ''
+    else:
+        # lowercase and tokenization (similar to Spark tokenizer)
+        cleantext = rawtext.lower().split()
+        # remove stopwords
+        cleantext = [
+            el for el in cleantext if el not in stopwords]
+        # replacement of equivalent words
+        cleantext = [equivalences[el] if el in equivalences else el
+                        for el in cleantext]
+        # remove stopwords again, in case equivalences introduced new stopwords
+        cleantext = [
+            el for el in cleantext if el not in stopwords]
+
+    return ' '.join(cleantext)
