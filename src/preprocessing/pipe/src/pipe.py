@@ -28,6 +28,7 @@ class Pipe():
                  language: str,
                  max_length: int,
                  raw_text_cols: List[str],
+                 path_add_acr: str = None,
                  logger=None):
         """
         Initilization Method
@@ -58,7 +59,7 @@ class Pipe():
 
         # Load stopwords and acronyms
         self._loadSTW(stw_files)
-        self._loadACR(language)
+        self._loadACR(language, path_add_acr)
 
         # Download spaCy model if not already downloaded and load
         self._nlp = load_spacy(spaCy_model, exclude=['parser', 'ner'])
@@ -88,12 +89,16 @@ class Pipe():
 
         return
 
-    def _loadACR(self, lang: str) -> None:
+    def _loadACR(self, lang: str, path_add_acr:str =None) -> None:
         """
         Loads list of acronyms
         """
 
         self._acr_list = acronyms.en_acronyms_list if lang == 'en' else acronyms.es_acronyms_list
+        
+        # TODO: Load additional acronyms from file
+        df = pd.read_excel(path_add_acr)
+        # TODO: Transform and add to self._acr_list
 
         return
 

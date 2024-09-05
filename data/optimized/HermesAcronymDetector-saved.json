@@ -6,80 +6,76 @@
     "demos": [
       {
         "augmented": true,
-        "TEXT": "Suministro (mediante alquiler) de elementos luminosos ornamentales y cuadros el\u00e9ctricos, el montaje, mantenimiento y desmontaxe de los mismo para las fiestas de Nadal 2017\/2018 y fiestas de Santa Rita y San Roque 2018, as\u00ed como la distribuci\u00f3n en baja tensi\u00f3n y conexionado y desconexionado de las orquestas de las fiestas de Santa Rita y San Roque 2018",
+        "TEXT": "Actuacion por seguridad vial. Construcci\u00f3n de aceras en la Carretera RM-560 P.K. 9+000 T.M. de Alcantarilla",
         "rationale": "produce the ACRONYMS. We...",
-        "ACRONYMS": "Suministro (mediante alquiler) de elementos luminosos ornamentales y cuadros el\u00e9ctricos, el montaje, mantenimiento y desmontaxe de los mismo para las fiestas de Nadal 2017\/2018 y fiestas de Santa Rita y San Roque 2018, as\u00ed como la distribuci\u00f3n en baja tens"
+        "ACRONYMS": "RM-560"
       },
       {
         "augmented": true,
-        "TEXT": "Elaboraci\u00f3n del estudio ambiental de la zona costera de Monpas y de los estuarios de los r\u00edos Oiartzun y Urumea",
+        "TEXT": "Contrato basado 114 2017 6625.  SP20 Reparaci\u00f3n de la instalaci\u00f3n deportiva municipal Puerto de Monasterio",
         "rationale": "produce the ACRONYMS. We...",
-        "ACRONYMS": "\/"
+        "ACRONYMS": "SP20"
       },
       {
-        "augmented": true,
-        "TEXT": "Colector de Pluviales en Calle Palmeras y Calle Zaragoza de Ceut\u00ed (Murcia).",
-        "rationale": "produce the ACRONYMS. We...",
-        "ACRONYMS": "Colector de Pluviales en Calle Palmeras y Calle Zaragoza de Ceut\u00ed (Murcia)."
-      },
-      {
-        "augmented": true,
-        "TEXT": "Suministro de 11 lonas para las tiendas modulares de SAMUR-Protecci\u00f3n Civil",
-        "rationale": "produce the ACRONYMS. We...",
-        "ACRONYMS": "SAMUR-Protecci\u00f3n Civil"
-      },
-      {
-        "texto": "2017\/CSUN1\/000015 - Adquisici\u00f3n e instalaci\u00f3n de dos vitrinas de gases y armarios bajo vitrina en el edificio CIQUS",
-        "detected_acronimos": "CIQUS"
-      },
-      {
-        "texto": "Aliviadero Colector General de Caravaca en Paraje Ca\u00f1ada de Lentisco, T.M. Caravaca de la Cruz (Murcia)",
-        "detected_acronimos": "T.M."
-      },
-      {
-        "texto": "Contrato de obra de construcci\u00f3n de una cubierta y pavimentaci\u00f3n de pista polideportiva en el municipio de Fasnia",
+        "texto": "Seguro de veh\u00edculos (Derivado del Acuerdo Marco siguiente: Acuerdo Marco para la contrataci\u00f3n de coberturas del seguro de veh\u00edculos a trav\u00e9s de la Central de Contrataci\u00f3n Foral)",
         "detected_acronimos": "\/"
       },
       {
-        "texto": "Contrataci\u00f3n Servicio del Centro de Atenci\u00f3n Diurna.",
+        "texto": "Lavander\u00eda de ropa hospitalar\u00eda para Centros dependientes del Servicio Madrile\u00f1o de Salud",
         "detected_acronimos": "\/"
       },
       {
-        "texto": "Contrato basado n\u00ba 20 del Lote 3 del acuerdo marco de servicios de \u201cTrabajos de apoyo a la redacci\u00f3n de proyectos de ejecuci\u00f3n de obras para la Direcci\u00f3n General de Patrimonio (4 lotes)\u201d.",
-        "detected_acronimos": "N\u00ba"
-      },
-      {
-        "texto": "Contrataci\u00f3n de los servicios  de coordinaci\u00f3n del soporte funcional a usuarios del sistema de RRHH del Gobierno Vasco sobre la plataforma SAP. EXPEDIENTE PREPARADO EXCLUSIVAMENTE PARA LICITACI\u00d3N ELECTR\u00d3NICA.",
-        "detected_acronimos": "RRHH, SAP"
-      },
-      {
-        "texto": "Colector de Saneamiento del Sur de las Librilleras, KM 15, Los Curas y Otras en Lorca (Murcia)",
-        "detected_acronimos": "KM"
-      },
-      {
-        "texto": "Filtro Verde en el entorno de la desembocadura de la Rambla del Albuj\u00f3n al Mar Menor, T.M. de Cartagena (Murcia)",
-        "detected_acronimos": "T.M."
-      },
-      {
-        "texto": "Carga, transporte y entrega acopio de hidr\u00f3xido c\u00e1lcico en antigua parcela EPA CALPRIN, B\u00e9rvola ",
-        "detected_acronimos": "EPA "
-      },
-      {
-        "texto": "Suministro de productos qu\u00edmicos y reactivos para el an\u00e1lisis y tratamiento de agua de las piscinas de los centros deportivos municipales Orcasitas, Orcasur y San Ferm\u00edn, del distrito de Usera",
+        "texto": "Acuerdo Marco para el suministro de conservas, mermeladas, zumos, miel, ahumados, salazones y platos preparados",
         "detected_acronimos": "\/"
       },
       {
-        "texto": "\"Servicio de Mtto. integral del TAc Aquilion s16 GCD07x3084, deToshiba ubicado en el Servicio de Radiolog\u00eda Gral del HCUVA\"",
-        "detected_acronimos": "Mtto., TAc, HCUVA"
+        "texto": "Servicios de arquitecto para la remodelaci\u00f3n de instalaciones que con motivo del proyecto HOGEI URTE se realizar\u00e1n por parte de Euskalduna Jauregia Palacio Euskalduna, S.A ",
+        "detected_acronimos": "S.A"
       },
       {
-        "texto": "Subsanaci\u00f3n de patolog\u00edas en el Palacete de Villa Rosa en Carretera de Canillas, n\u00ba 2. Distrito Hortaleza",
-        "detected_acronimos": "N\u00ba"
+        "texto": "Contrato basado 114 2017 6543. E4 Auditorio Entrev\u00edas, obras de remodelaci\u00f3n",
+        "detected_acronimos": "\/"
+      },
+      {
+        "texto": "OBRA COMPLEMENTARIA para la Construcci\u00f3n de un CEIP en Arroyo de la Encomienda (Valladolid)",
+        "detected_acronimos": "CEIP"
+      },
+      {
+        "texto": "Limpieza de los Edificios de la Agencia Tributaria Madrid",
+        "detected_acronimos": "\/"
+      },
+      {
+        "texto": "Servicio de apoyo a las siguientes arenas de gesti\u00f3n: sistema integrado de atenci\u00f3n a la ciudadan\u00eda; medici\u00f3n de las cargas de trabajo de los empleados p\u00fablicos; impulso de la gesti\u00f3n de la calidad, transparencia y eficiencia en el sector p\u00fablico auton\u00f3mico.",
+        "detected_acronimos": "\/"
+      },
+      {
+        "texto": "Contrato de suministro e instalaci\u00f3n de armarios compactos deslizables sobre ra\u00edles con destino al Archivo Central del ECIT para la Unidad Org\u00e1nica de Apoyo al Consejo de Gobierno y al Consejero, Secretario, Fe Publica y de Archivo y Documentaci\u00f3n",
+        "detected_acronimos": "ECIT"
+      },
+      {
+        "texto": "Prestaci\u00f3n del servicio de redacci\u00f3n de documentaci\u00f3n t\u00e9cnica relativa a la ordenaci\u00f3n de espacios para la ubicaci\u00f3n de dependencias municipales en el Edificio Easo",
+        "detected_acronimos": "\/"
+      },
+      {
+        "texto": "Contrataci\u00f3n del seguro todo riesgo de da\u00f1os materiales del Hospital Universitario Fundaci\u00f3n Alcorc\u00f3n",
+        "detected_acronimos": "\/"
+      },
+      {
+        "texto": "Suministro de sueros de irrigaci\u00f3n y lavado con destino a los centros sanitarios dependientes del Servicio Murciano de Salud, mediante licitaci\u00f3n electr\u00f3nica.",
+        "detected_acronimos": "\/"
+      },
+      {
+        "texto": "Contrato basado 114 2017 6673. Vestuarios Arbolitos.",
+        "detected_acronimos": "\/"
+      },
+      {
+        "texto": "Suministro de un sistema de direccionamiento y llamada para pacientes en consultas externas y hospital de d\u00eda y de informaci\u00f3n a familiares de pacientes atendidos en quir\u00f3fanos para el Hospital Universitario de Fuenlabrada y CEP",
+        "detected_acronimos": "CEP"
       }
     ],
-    "signature_instructions": "\n    Given a text identify the acronyms contained in it. If none are present in the text, say '\/'.\n    ",
+    "signature_instructions": "\n    Given a text identify the acronyms contained in it. If none are present in the text, say '\/'.\n    ----------------------------------------------------------------------------\n    Examples\n    --------\n    TEXT: \"El pib en Espa\u00f1a ha subido un 2% en el \u00faltimo trimestre. En la UE se ha registrado un aumento del 3%.\"]\n    ACRONYMS: pib, UE\n    \n    TEXT: \"Trabajos de sondeos del terreno y Estudio geot\u00e9cnico en el CEIP JACARANDA, sito en la C\/ Italo Cortella s\/n , del Distrito Alcosa-Este Torreblanca(Sevilla)\"]\n    ACRONYMS: CEIP, C\/, s\/n\n    \n    TEXT: \"Adecuaci\u00f3n de parte del semisotano del consultorio medico Juan Antonio Serrano, incorporando condiciones especiales de ejecuci\u00f3n de car\u00e1cter social relativas a inserci\u00f3n sociolaboral de personas en situaci\u00f3n de desempleo de larga duranci\u00f3n\"]\n    ACRONYMS: \/ \n    ----------------------------------------------------------------------------\n    ",
     "signature_prefix": "ACRONYMS:",
-    "extended_signature_instructions": "\n    Given a text identify the acronyms contained in it. If none are present in the text, say '\/'.\n    ",
+    "extended_signature_instructions": "\n    Given a text identify the acronyms contained in it. If none are present in the text, say '\/'.\n    ----------------------------------------------------------------------------\n    Examples\n    --------\n    TEXT: \"El pib en Espa\u00f1a ha subido un 2% en el \u00faltimo trimestre. En la UE se ha registrado un aumento del 3%.\"]\n    ACRONYMS: pib, UE\n    \n    TEXT: \"Trabajos de sondeos del terreno y Estudio geot\u00e9cnico en el CEIP JACARANDA, sito en la C\/ Italo Cortella s\/n , del Distrito Alcosa-Este Torreblanca(Sevilla)\"]\n    ACRONYMS: CEIP, C\/, s\/n\n    \n    TEXT: \"Adecuaci\u00f3n de parte del semisotano del consultorio medico Juan Antonio Serrano, incorporando condiciones especiales de ejecuci\u00f3n de car\u00e1cter social relativas a inserci\u00f3n sociolaboral de personas en situaci\u00f3n de desempleo de larga duranci\u00f3n\"]\n    ACRONYMS: \/ \n    ----------------------------------------------------------------------------\n    ",
     "extended_signature_prefix": "ACRONYMS:"
   }
 }

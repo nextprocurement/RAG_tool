@@ -8,7 +8,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", type=str, required=False, help="Path to the input file", default="/export/usuarios_ml4ds/cggamella/NP-Search-Tool/sample_data/models/Mallet/es_Mallet_df_merged_20_topics_45_ENTREGABLE/datos_modelo.parquet")
     parser.add_argument("--output", type=str, required=False, help="Path to the output file", default="/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/preprocessed/cpv_45_preproc.parquet")
-    
+    parser.add_argument("--path_add_acr",  type=str, required=False, help="Path to the acr file", default="/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/preprocessed/cpv_45_preproc.parquet")
     args = parser.parse_args()
         
 
@@ -21,16 +21,32 @@ if __name__ == '__main__':
     lang = "es"
 
     # Construct the command
-    cmd = [
-        "python", preprocessing_script,
-        "--source_path", source_path,
-        "--source_type", source_type,
-        "--source", source,
-        "--destination_path", destination_path,
-        "--lang", lang,
-        "--spacy_model", spacy_model,
-        "--do_embeddings"
-    ]
+    
+    if  args.path_add_acr:
+        cmd = [
+            "python", preprocessing_script,
+            "--source_path", source_path,
+            "--source_type", source_type,
+            "--source", source,
+            "--destination_path", destination_path,
+            "--lang", lang,
+            "--spacy_model", spacy_model,
+            "--path_add_acr", args.path_add_acr,
+            "--do_embeddings"
+        ]
+        
+    else:
+    
+        cmd = [
+            "python", preprocessing_script,
+            "--source_path", source_path,
+            "--source_type", source_type,
+            "--source", source,
+            "--destination_path", destination_path,
+            "--lang", lang,
+            "--spacy_model", spacy_model,
+            "--do_embeddings"
+        ]
 
     try:
         print(f'-- -- Running preprocessing command {" ".join(cmd)}')

@@ -81,7 +81,6 @@ def process_dataframe(
                 acronyms = clean_acronyms(prediction.ACRONYMS)
                 acronyms_list = acronyms.lower().split(',')
                 print("ACRONYMS DETECTED DETECTOR MODULE:", acronyms_list)
-                sleep(2)
 
                 # Filter detected acronyms
                 detected_acronyms.update(acronym.strip() for acronym in acronyms_list)
@@ -100,11 +99,9 @@ def process_dataframe(
                 print(f"ACRONYMS AFTER filter_companies: {detected_acronyms}")
                 detected_acronyms = filter_acronyms_in_text(text, detected_acronyms)
                 print(f"ACRONYMS AFTER filter_acronyms_in_text: {detected_acronyms}")
-                sleep(2)
 
                 if not detected_acronyms or '/' in detected_acronyms:
                     print(f"No acronyms AFTER FILTERING in row {identifier}, continue the loop.")
-                    sleep(2)
                     df.at[identifier, 'Acronyms Detected(LLM)'] = '/'
                     continue
                 
@@ -113,10 +110,13 @@ def process_dataframe(
                 print(f"ACRONYMS BEFORE NER FILTERING: {detected_acronyms_list}")
                 
                 # Analyze acronyms using NERTextAnalyzer
-                analysis_result = ner_analyzer.analyze_text(text, detected_acronyms_list)
-                detected_acronyms = {info['text'].lower() for info in analysis_result['words']}
+                detected_acronyms = ner_analyzer.analyze_text(text, detected_acronyms_list)
                 print(f"Acronyms after ner: {detected_acronyms}")
-                sleep(1)
+                
+                if not detected_acronyms or '/' in detected_acronyms:
+                    print(f"No acronyms AFTER FILTERING in row {identifier}, continue the loop.")
+                    df.at[identifier, 'Acronyms Detected(LLM)'] = '/'
+                    continue
                                 
                 # Update the DataFrame with the detected acronyms
                 df.at[identifier, 'Acronyms Detected(LLM)'] = ', '.join(detected_acronyms)
@@ -133,7 +133,7 @@ def process_dataframe(
 
             # Skip the row if acronyms are not detected or contain '/' or are empty
             if acronyms_detected in ['/', '']:
-                logger.error(f"No acronyms detected in the row {identifier}. Expansion cannot be applied.")
+                logger.error(f"No acronyms detected in the row {identifier}. No expansion its needed.")
                 df.at[identifier, 'Expansions'] = '/'
                 continue
 
@@ -151,7 +151,6 @@ def process_dataframe(
                       
                 except Exception as e:
                     logger.error(f"Error expanding {acronym} in row {identifier}: {e}")
-                    sleep(30)
 
             # Update the DataFrame with the expansions for each row
             df.at[identifier, 'Expansions'] = ', '.join(expansions)
@@ -268,7 +267,7 @@ def extract_passages(text, acronym):
 
 def clean_acronyms(text):
     """
-        Remove '(..text..)' inside parenthesis. Useful to clean LLM extra information.
+    Remove '(..text..)' inside parenthesis. Useful to clean LLM extra information.
     """
     cleaned_text = re.sub(r'\s*\([^)]*\)', '', text)
     return cleaned_text.strip()

@@ -53,6 +53,8 @@ def main():
                         help="Flag to activate processing with Dask. By default, pandas is used")
     parser.add_argument("--nw", type=int, default=0,
                         required=False, help="Number of workers to use with Dask")
+    parser.add_argument("--path_add_acr", type=str, default=None,
+                        required=True, help="Path to addidional acronyms file")
 
     args = parser.parse_args()
 
@@ -234,6 +236,7 @@ def main():
                            language=args.lang,
                            max_length=max_len,
                            raw_text_cols=raw_txt_flds,
+                           path_add_acr=args.path_add_acr,
                            logger=logger)
 
         logger.info(f'-- -- NLP preprocessing starts...')

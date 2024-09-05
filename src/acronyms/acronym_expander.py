@@ -4,7 +4,6 @@ import copy
 import pathlib
 import logging
 import unidecode
-from time import sleep
 from sklearn.model_selection import train_test_split
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -16,6 +15,24 @@ from lingua import Language, LanguageDetectorBuilder
 class AcronymExpander(dspy.Signature):
     """
     Expand the acronyms based on the text.
+    ----------------------------------------------------------------------------
+    Examples
+    --------
+    TEXT: "El pib en España ha subido un 2% en el último trimestre. En la UE se ha registrado un aumento del 3%."]
+    ACRONYMS: 'pib', 'UE'
+    LANGUAGE: SPANISH
+    EXPANSION: 'Producto Interior Bruto', 'Unión Europea'
+    
+    TEXT: "Trabajos de sondeos del terreno y Estudio geotécnico en el CEIP JACARANDA, sito en la C/ Italo Cortella s/n , del Distrito Alcosa-Este Torreblanca(Sevilla)"]
+    ACRONYMS: 'CEIP', 'C/', 's/n'
+    LANGUAGE: SPANISH
+    EXPANSION: 'Centro de Educación Infantil y Primaria', 'Calle', 'sin número'
+    
+    TEXT: "Adecuación de parte del semisotano del consultorio medico Juan Antonio Serrano, incorporando condiciones especiales de ejecución de carácter social relativas a inserción sociolaboral de personas en situación de desempleo de larga duranción"]
+    ACRONYMS: '/' 
+    LANGUAGE: SPANISH
+    EXPANSION: '/'
+    ----------------------------------------------------------------------------
     """
     TEXT = dspy.InputField()
     ACRONYMS = dspy.InputField()
@@ -50,6 +67,7 @@ class AcronymExpanderModule(dspy.Module):
         text = ''.join(char for char in text if char.isalnum() or char.isspace())
         return text
     
+    # Useless function if Suggest is NOT used in the forward method
     def verify_expansions(self, acronym, expansion):
         """
         Verifiy if the expansion is equal to the acronym.
@@ -65,32 +83,52 @@ class AcronymExpanderModule(dspy.Module):
         """
         language_detector = LanguageDetectorModule()
         idioma = language_detector.detect_language(texto)
-        response = self.expander(TEXT=texto, ACRONYMS=acronimo, LANGUAGE=idioma)
-        expansion_generada = response.EXPANSION
-        '''
-        #try:
-        # Suggest to verify if the expansion is equal to the acronym
-        dspy.Suggest(
-            not self.verify_expansions(acronimo, expansion_generada),
-            "Expansion generated is equal to the acronym",
-            target_module=AcronymExpander
-            )
-        #except DSPySuggestionError as e:
-        #    print(f"Suggestion failure: {e}. Execution keep going...")
-        '''
-        normalized_expansion = self.normalize_text(expansion_generada)
-        normalized_acronym = self.normalize_text(acronimo)
+        
+        # Convert acronyms to a list
+        acronimos_list = [acronimo.strip() for acronimo in acronimo.split(',')]
+        print("LISTA:",acronimos_list)
+        
+        expansions = []
 
-        # Check if the normalized expansion is identical to the acronym
-        if normalized_expansion == normalized_acronym:
-            print("EXPANSION GENERATED IS EQUAL TO THE ACRONYM!!!")
-            print('*'*50)
-            return dspy.Prediction(EXPANSION='/')
-        # Verify if the expansion is not empty or a placeholder
-        if not expansion_generada or expansion_generada in self.no_expansion_variations:
-            return dspy.Prediction(EXPANSION='/')
-        # Process the expansion output
-        return dspy.Prediction(EXPANSION=self._process_output(expansion_generada))
+        for acronimo in acronimos_list:
+            response = self.expander(TEXT=texto, ACRONYMS=acronimo, LANGUAGE=idioma)
+            expansion_generada = response.EXPANSION
+
+            # Verificar si la expansión es vacía o un marcador de posición
+            if not expansion_generada or expansion_generada in self.no_expansion_variations:
+                print(f"Entra aquí con el acrónimo: {acronimo}")
+                expansions.append("/")
+                continue
+
+            normalized_expansion = self.normalize_text(expansion_generada)
+            print("La expansión normalizada es:", normalized_expansion)
+            normalized_acronym = self.normalize_text(acronimo)
+            print("El acrónimo normalizado es:", normalized_acronym)
+
+            # Verificar si la expansión generada es demasiado larga
+            if len(normalized_expansion) > 120:
+                print("EXPANSION GENERATED IS TOO LONG!!!")
+                expansions.append("/")
+                continue
+
+            # Verificar si la expansión normalizada es idéntica al acrónimo
+            if normalized_expansion == normalized_acronym:
+                print("EXPANSION GENERATED IS EQUAL TO THE ACRONYM, MISTAKE!!!")
+                print('*' * 50)
+                expansions.append("/")
+                continue
+
+            # Verificar si alguna palabra de la expansión normalizada es idéntica al acrónimo normalizado
+            if any(word == normalized_acronym for word in normalized_expansion.split()):
+                print("A WORD IN THE NORMALIZED EXPANSION IS IDENTICAL TO THE ACRONYM!")
+                expansions.append("/")
+                continue
+            # Procesar la expansión generada
+            processed_expansion = self._process_output(expansion_generada)
+            expansions.append(processed_expansion)
+
+        # Unir las expansiones en un solo string para devolver
+        return dspy.Prediction(EXPANSION=', '.join(expansions))
         
 class LanguageDetectorModule:
     def __init__(self):
@@ -141,7 +179,7 @@ class HermesAcronymExpander(object):
             if not pathlib.Path(trained_promt).exists():
                 self._logger.error("Trained prompt not found. Exiting.")
                 return
-            self.module = AcronymExpanderModule(language_detector=self.language_detector)
+            self.module = AcronymExpanderModule()
             self.module.load(trained_promt)
             self._logger.info(f"AcronymExpanderModule loaded from {trained_promt}") 
         else:

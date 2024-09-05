@@ -688,13 +688,14 @@ class MalletLdaModel(TopicModel):
 
     def train(
         self,
+        further_proc: bool = True,
     ) -> None:
         """
         Train the topic model and save the data to save_data_path
         """
 
         # Call the train method from the parent class to load the data and initialize the save_path
-        super().train()
+        super().train(further_proc=further_proc)
 
         # Create folder for saving Mallet output files
         self.model_folder = self.save_path / "modelFiles"
@@ -1073,13 +1074,15 @@ class CtmModel(TopicModel):
 
     def train(
         self,
+        further_proc: bool = True,
     ) -> None:
         """
         Train the topic model and save the data to save_data_path
         """
 
         # Call the train method from the parent class to load the data and initialize the save_path
-        super().train(get_embeddings=True)
+        super().train(get_embeddings=True, further_proc=further_proc)
+
 
         self._logger.info(
             f"-- -- Creating TopicModelDataPreparation object and fitting the data..."
@@ -1380,14 +1383,15 @@ class BERTopicModel(TopicModel):
 
     def train(
         self,
+        further_proc: bool = True,
     ) -> None:
         """
         Train the topic model and save the data to save_data_path
         """
 
         # Call the train method from the parent class to load the data and initialize the save_path
-        super().train(get_embeddings=True)
-
+        super().train(get_embeddings=True, further_proc=further_proc)
+        
         # Put components together to create BERTopic model
         # STEP 0 : Embedding model
         if self.embeddings is not None:
@@ -1755,13 +1759,14 @@ class TopicGPTModel(TopicModel):
 
     def train(
         self,
+        further_proc: bool = True,
     ) -> None:
         """
         Train the topic model and save the data to save_data_path
         """
 
         # Call the train method from the parent class to load the data and initialize the save_path
-        super().train(get_preprocessed=False)
+        super().train(get_preprocessed=False, further_proc=further_proc)
 
         # Create folder for saving Mallet output files
         self.model_folder = self.save_path / "modelFiles"

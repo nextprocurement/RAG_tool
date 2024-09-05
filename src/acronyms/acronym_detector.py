@@ -14,6 +14,18 @@ from dspy.teleprompt import BootstrapFewShotWithRandomSearch
 class AcronymDetector(dspy.Signature):
     """
     Given a text identify the acronyms contained in it. If none are present in the text, say '/'.
+    ----------------------------------------------------------------------------
+    Examples
+    --------
+    TEXT: "El pib en España ha subido un 2% en el último trimestre. En la UE se ha registrado un aumento del 3%."]
+    ACRONYMS: pib, UE
+    
+    TEXT: "Trabajos de sondeos del terreno y Estudio geotécnico en el CEIP JACARANDA, sito en la C/ Italo Cortella s/n , del Distrito Alcosa-Este Torreblanca(Sevilla)"]
+    ACRONYMS: CEIP, C/, s/n
+    
+    TEXT: "Adecuación de parte del semisotano del consultorio medico Juan Antonio Serrano, incorporando condiciones especiales de ejecución de carácter social relativas a inserción sociolaboral de personas en situación de desempleo de larga duranción"]
+    ACRONYMS: / 
+    ----------------------------------------------------------------------------
     """
     TEXT = dspy.InputField()
     ACRONYMS = dspy.OutputField(desc="list of comma-separated acronyms", format=lambda x: ', '.join(x) if isinstance(x, list) else x)
@@ -37,6 +49,7 @@ class AcronymDetectorModule(dspy.Module):
         else:
             return texto
     
+    # Useless function if Suggest is NOT used in the forward method
     def verify_acronyms(self, texto, acronyms):
         """
         Verify if all acronyms are present in the text
@@ -67,6 +80,8 @@ class AcronymDetectorModule(dspy.Module):
         #    print(f"Sugerencia fallida: {e}. Continuando ejecución...")
         '''
         if len(texto) == len(acronyms) or texto == acronyms:
+            return dspy.Prediction(ACRONYMS='/')
+        elif len(acronyms) > 20:
             return dspy.Prediction(ACRONYMS='/')
         else:
             return dspy.Prediction(ACRONYMS=self._process_output(acronyms))

@@ -66,16 +66,25 @@ def main():
         type=bool, 
         default=True
     )
+    argparser.add_argument(
+        "--further_proc",
+        help="Whether to further process the data.",
+        type=bool, 
+        default=False
+    )
 
     args = argparser.parse_args()
     
     if args.model_type == 'all':
-        for model_type in ["MalletLda"]: #['TopicGPT','MalletLda', 'Ctm', 'BERTopic']:
+        models = ['MalletLda', 'Ctm', 'BERTopic', 'TopicGPT']
+    else:
+        models = [args.model_type]
+        for model_type in models:
             
             model_path = pathlib.Path(args.model_path) / f"{model_type}_{args.num_topics}"
             print(f"-- -- Training model of type {model_type} at {model_path}...")
             
-            list_skip = ['model_type']
+            list_skip = ['model_type','further_proc']
             if model_type == 'BERTopic':
                 list_skip += ['num_iters']
             
@@ -99,7 +108,8 @@ def main():
             model = create_model(model_type, **params)
 
             # Train the model
-            model.train()
+            model.train(args.further_proc)
+        
 
 
 if __name__ == "__main__":

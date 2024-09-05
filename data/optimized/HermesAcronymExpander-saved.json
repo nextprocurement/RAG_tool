@@ -6,90 +6,94 @@
     "demos": [
       {
         "augmented": true,
-        "TEXT": "Reforma fachadas C.C. Eduardo \u00darculo. Distrito Tetu\u00e1n",
-        "ACRONYMS": "C.C.",
+        "TEXT": "Adquisici\u00f3n de dos licencias Oracle DB \"Enterprise Edition\" para el Servicio P\u00fablico de Empleo de Castilla y Le\u00f3n\"",
+        "ACRONYMS": "DB",
         "LANGUAGE": "SPANISH",
-        "EXPANSION": "Centro Comercial"
+        "EXPANSION": "Base de datos"
       },
       {
         "augmented": true,
-        "TEXT": "Obras correspondientes al proyecto de urbanizaci\u00f3n del parque fluvial del Plan Especial de la reforma interior del AIU LO.05 Txomin Enea",
-        "ACRONYMS": "AIU",
+        "TEXT": "Programa de Prevenci\u00f3n de Riesgos derivados del uso inadecuado de las Tecnolog\u00edas de la Informaci\u00f3n y Comunicaci\u00f3n (TIC) Innov@amos dirigido a alumnos de Educaci\u00f3n Primaria y familias de la Comunidad de Madrid",
+        "ACRONYMS": "TIC",
         "LANGUAGE": "SPANISH",
-        "EXPANSION": "Administraci\u00f3n de Infraestructuras Urbanas"
+        "EXPANSION": "Tecnolog\u00edas de la Informaci\u00f3n y Comunicaci\u00f3n"
       },
       {
-        "texto": "Servicio de mantenimiento de pyxis y kardex ubicados en el H.U. Santa Mar\u00eda del Rosell y H.G.U. Santa Luc\u00eda de Cartagena",
-        "acronimo": "H.U., H.G.U.",
-        "expansion": "hospital universitario, hospital general universitario"
+        "augmented": true,
+        "TEXT": "PRESTACI\u00d3N DEL SERVICIO DE: MANTENIMIENTO DE LAS APLICACIONES INFORM\u00c1TICAS DE SISTEMAS DE INFORMACI\u00d3N GEOGR\u00c1FICA (SIG) Y CAD DE LA DIPUTACI\u00d3N FORAL DE \u00c1LAVA PARA EL A\u00d1O 2018.",
+        "ACRONYMS": "SIG",
+        "LANGUAGE": "SPANISH",
+        "EXPANSION": "Sistema de Informaci\u00f3n Geogr\u00e1fica"
       },
       {
-        "texto": "Reparaci\u00f3n por cambio de impermeabilizaci\u00f3n y solado zona de acceso com\u00fan en el Grupo 981 de 10 Viviendas de Promoci\u00f3n P\u00fablica Barrio de la estaci\u00f3n de Blanca (ARRU Vega del segura)",
-        "acronimo": "ARRU",
-        "expansion": "areas de regeneraci\u00f3n y renovaci\u00f3n urbana "
+        "augmented": true,
+        "TEXT": "PRESTACI\u00d3N DEL SERVICIO DE: MANTENIMIENTO DE LAS APLICACIONES INFORM\u00c1TICAS DE SISTEMAS DE INFORMACI\u00d3N GEOGR\u00c1FICA (SIG) Y CAD DE LA DIPUTACI\u00d3N FORAL DE \u00c1LAVA PARA EL A\u00d1O 2018.",
+        "ACRONYMS": "CAD",
+        "LANGUAGE": "SPANISH",
+        "EXPANSION": "Cartograf\u00eda Autom\u00e1tica Digital"
       },
       {
-        "texto": "Carga, transporte y entrega acopio de hidr\u00f3xido c\u00e1lcico en antigua parcela EPA CALPRIN, B\u00e9rvola ",
-        "acronimo": "EPA ",
-        "expansion": "estaci\u00f3n de tratamientos de agua"
+        "texto": "Aceras en la avenida de la Constituci\u00f3n entre la calle n\u00fam. 19 y la calle Ra\u00f1\u00f3 (PO 2017) (Expediente de contrataci\u00f3n 17-2017)",
+        "acronimo": "n\u00fam.",
+        "expansion": "n\u00famero"
       },
       {
-        "texto": "Contrato basado 114 2017 3272. Supresi\u00f3n de paso de veh\u00edculos en C\/Cer\u00e1mica 29 de Madrid",
-        "acronimo": "C\/Cer\u00e1mica",
-        "expansion": "calle Cer\u00e1mica"
+        "texto": "Contrato de servicios de coordinaci\u00f3n del conjunto de las actuaciones aprobada en el Proyecto denominado Red de Recorridos Tur\u00edsticos Preferentes en Enclaves Patrimonio de la Humanidad del Atl\u00e1ntico de la Macaronesia (RECORED)",
+        "acronimo": "RECORED",
+        "expansion": "Red de Recorridos Tur\u00edsticos Preferentes en Enclaves Patrimonio de la Humanidad del Atl\u00e1ntico de la Macaronesia"
       },
       {
-        "texto": "obras de mejora de la instalaci\u00f3n el\u00e9ctrica en baja tensi\u00f3n en el IES Polit\u00e9cnico de Cartagena (Murcia).",
-        "acronimo": "IES",
-        "expansion": "instituto de educaci\u00f3n secundaria "
+        "texto": "Suministro de medicamentos de distribuci\u00f3n exclusiva de la firma \"TEVA PHARMA S.LU.\" con destino al Servicio de Farmacia del Hospital Universitario \"12 de Octubre\"",
+        "acronimo": "S.LU.",
+        "expansion": "Sociedad de\u00a0Responsabilidad Limitada\u00a0Unipersonal"
       },
       {
-        "texto": "103\/2017\/05266. IDM DAOIZ Y VELARDE: Obras de reforma para la renovaci\u00f3n parcial del sistema de captaci\u00f3n solar- Fase I.",
-        "acronimo": "IDM",
-        "expansion": "iniciativa del desarrollo y modernizaci\u00f3n"
+        "texto": "Adquisici\u00f3n de 31.000 determinaciones para el diagn\u00f3stico post mortem, mediante la t\u00e9cnica ELISA de encefalopat\u00edas espongiformes transmisibles (EETS) en los animales de las especies bovina, ovina y caprina",
+        "acronimo": "ELISA, EETS",
+        "expansion": "enzimoinmunoan\u00e1lisis de adsorci\u00f3n,  encefalopat\u00edas espongiformes transmisibles"
       },
       {
-        "texto": "Reparaci\u00f3n de barreras de contenci\u00f3n de veh\u00edculos y acondicionamiento de m\u00e1rgenes en la v\u00eda GM-1 Tramo: Hermigua-Agulo, desde el P.K. 11+000 al 25+000. Isla de La Gomera",
-        "acronimo": " P.K.",
-        "expansion": "punto kilom\u00e9trico "
+        "texto": "OBRA COMPLEMENTARIA para la Construcci\u00f3n de un CEIP en Arroyo de la Encomienda (Valladolid)",
+        "acronimo": "CEIP",
+        "expansion": "colegio de educaci\u00f3n infantil primaria"
       },
       {
-        "texto": "Reconstrucci\u00f3n de aceras en traves\u00eda T-533-2, T.M. de Ceut\u00ed",
-        "acronimo": "T.M.",
-        "expansion": "t\u00e9rmino municipal"
+        "texto": "Contrato basado 114 2017 6902. SE25 CC El Pozo: rehabilitaci\u00f3n de fachada, intervenciones en teatro, sustituci\u00f3n de aparatos de climatizaci\u00f3n y traslado de rack",
+        "acronimo": "CC",
+        "expansion": "centro comercial"
       },
       {
-        "texto": "Traslado y puesta en marcha del generador de hielo de veinte t\/n d\u00eda desde Los Cristianos hasta el puerto pesquero de Arguinegu\u00edn (t\u00e9rmino municipal de Mog\u00e1n), isla de Gran Canaria",
-        "acronimo": "t\/n",
-        "expansion": "\/"
+        "texto": "2017\/CSUA1\/000015 - Implementar una serie de mejoras en el sistema de cableado estructurado (SCE) en varios edificios de la Universidad de Santiago  de Compostela (USC)",
+        "acronimo": "SCE,USC",
+        "expansion": "Sistema de cableado estructurado, Universidad de Santiago de Compostela"
       },
       {
-        "texto": "103\/2017\/05276 IDM DAOIZ Y VELARDE: Obras de reforma de instalaciones t\u00e9rmicas para mejora rendimiento y eficiencia energ\u00e9tica.",
-        "acronimo": "IDM",
-        "expansion": "iniciativa del desarrollo y modernizaci\u00f3n"
+        "texto": "Servicio de Celadur\u00eda y Labores Complementarias, en las instalaciones administrativas de la calle Prado Tuerto n\u00ba 17, de Zamora.",
+        "acronimo": "n\u00ba",
+        "expansion": "n\u00famero"
       },
       {
-        "texto": "Suministro de un robot AGV para el sistema de transporte robotizado",
-        "acronimo": "AGV",
-        "expansion": "automated guided vehicle "
+        "texto": "Contratos derivados del \"Acuerdo Marco para la homologaci\u00f3n del suministro de energ\u00eda el\u00e9ctrica y gas natural con destino al Sector P\u00fablico de la Comunidad Aut\u00f3noma de La Rioja\", sublotes 1.1, 1.2 y 2.1 para edicios Consejer\u00eda APH",
+        "acronimo": "APH",
+        "expansion": "Atenci\u00f3n prehospitalaria"
       },
       {
-        "texto": "Servicio de alimentaci\u00f3n de pacientes, autoservicio de personal, explotaci\u00f3n cafeter\u00eda del p\u00fablico y m\u00e1quinas vending en el Hospital Universitario de Fuenlabrada y CEP El Arroyo",
-        "acronimo": "CEP",
-        "expansion": "centro de especialidades perif\u00e9ricas "
+        "texto": "Contrato basado 114 2017 5398. SE23 C.C. Talleres de creatividad, eficiencia energ\u00e9tica: cambio de luminarias",
+        "acronimo": "C.C.",
+        "expansion": "centro comercial"
       },
       {
-        "texto": "Contrato de servicios control y vigilancia y seguridad y Salud obras reposici\u00f3n del Paso de la Carretera RM-d8 Sobre la Rambla de biznaga P.K. 2+870 a 3+400 P.K.. Lorca",
-        "acronimo": "P.K.",
-        "expansion": "punto kilom\u00e9trico "
+        "texto": "Servicios de arquitecto para la remodelaci\u00f3n de instalaciones que con motivo del proyecto HOGEI URTE se realizar\u00e1n por parte de Euskalduna Jauregia Palacio Euskalduna, S.A ",
+        "acronimo": "S.A",
+        "expansion": "sociedad an\u00f3nima"
       },
       {
-        "texto": "La contrataci\u00f3n, por procedimiento abierto, de la gesti\u00f3n del servicio de comedor escolar del C.E.E. Sant\u00edsimo Cristo de la Misericordia, de Murcia.",
-        "acronimo": "C.E.E.",
-        "expansion": "comunidad econ\u00f3mica europea"
+        "texto": "Refuerzo de firme en la VP 4013 Melgar de Arriba a Villacarral\u00f3n. Tramo: Santerv\u00e1s a Villacarral\u00f3n",
+        "acronimo": "VP",
+        "expansion": "v\u00eda p\u00fablica"
       }
     ],
-    "signature_instructions": "\n    Expand the acronyms based on the text.\n    ",
+    "signature_instructions": "\n    Expand the acronyms based on the text.\n    ----------------------------------------------------------------------------\n    Examples\n    --------\n    TEXT: \"El pib en Espa\u00f1a ha subido un 2% en el \u00faltimo trimestre. En la UE se ha registrado un aumento del 3%.\"]\n    ACRONYMS: 'pib', 'UE'\n    LANGUAGE: SPANISH\n    EXPANSION: 'Producto Interior Bruto', 'Uni\u00f3n Europea'\n    \n    TEXT: \"Trabajos de sondeos del terreno y Estudio geot\u00e9cnico en el CEIP JACARANDA, sito en la C\/ Italo Cortella s\/n , del Distrito Alcosa-Este Torreblanca(Sevilla)\"]\n    ACRONYMS: 'CEIP', 'C\/', 's\/n'\n    LANGUAGE: SPANISH\n    EXPANSION: 'Centro de Educaci\u00f3n Infantil y Primaria', 'Calle', 'sin n\u00famero'\n    \n    TEXT: \"Adecuaci\u00f3n de parte del semisotano del consultorio medico Juan Antonio Serrano, incorporando condiciones especiales de ejecuci\u00f3n de car\u00e1cter social relativas a inserci\u00f3n sociolaboral de personas en situaci\u00f3n de desempleo de larga duranci\u00f3n\"]\n    ACRONYMS: '\/' \n    LANGUAGE: SPANISH\n    EXPANSION: '\/'\n    ----------------------------------------------------------------------------\n    ",
     "signature_prefix": "EXPANSION:"
   }
 }

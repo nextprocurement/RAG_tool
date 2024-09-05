@@ -26,14 +26,14 @@ class NERTextAnalyzer:
 
     def analyze_text(self, text, detected_acronyms):
         """
-        Analyze the text and provide grammatical and NER details of detected acronyms.
+        Analyze the text and filter detected acronyms based on POS and NER criteria.
 
         Parameters:
         - text (str): The text to analyze.
         - detected_acronyms (list): A list of acronyms detected in the text.
 
         Returns:
-        - Dictionary containing details of words and entities that match detected acronyms.
+        - List of filtered acronyms after applying POS and NER filters.
         """
         # Detect language of the text and load the corresponding spaCy model
         language_detector = LanguageDetectorModule()
@@ -42,76 +42,76 @@ class NERTextAnalyzer:
         # Load the appropriate model based on the detected language
         self.load_model(detected_language)
 
-        # Process the text with the spaCy model
+        # Process text with the spaCy model
         doc = self.nlp(text)
         # Convert detected acronyms to lowercase for consistent comparisons
-        detected_acronyms = [acronym.lower() for acronym in detected_acronyms]
+        detected_acronyms = {acronym.lower() for acronym in detected_acronyms}
+        print("Acrónimos detectados:", detected_acronyms)
 
-        # Filter tokens to exclude certain POS types from the list of acronyms
-        filtered_acronyms = detected_acronyms[:]  # Create a copy of the detected acronyms
-        for token in doc:
-            if token.text.lower() in filtered_acronyms:
-                # Print the type of POS for each detected acronym
-                print(f"Acronym '{token.text}' detected with POS: {token.pos_}")
-                if token.pos_ in ["ADJ", "PUNCT", "VERB"]:
-                    filtered_acronyms.remove(token.text.lower())
-                    print(f"Acronym '{token.text}' has been deleted from the list due to POS: {token.pos_}")
+        # Separar cada acrónimo en sus palabras componentes
+        acronym_words = {}
+        for acronym in detected_acronyms:
+            words = acronym.split()
+            acronym_words[acronym] = words
+        print("\nPalabras separadas de los acrónimos:", acronym_words)
 
-        # Apply NER and filter entities based on the criteria
+        # POS and NER exclusion criteria
+        pos_to_exclude = {"ADJ", "PUNCT", "VERB"}
+        ner_labels_to_exclude = {"GPE", "TIME", "MONEY", "FAC"}
+
+        # Filter acronyms based on POS, sometimes they are composed of more than 1 word
+        acronyms_to_keep = set()
+        for acronym, words in acronym_words.items():
+            exclude_acronym = False
+            for word in words:
+                # Verify if the word is present in the document
+                word_found = False
+                for token in doc:
+                    if token.text.lower() == word:
+                        word_found = True
+                        # If the POS of the word is in the exclusion list, mark the acronym for exclusion
+                        if token.pos_ in pos_to_exclude:
+                            exclude_acronym = True
+                            print(f"La palabra '{token.text}' en el acrónimo '{acronym}' tiene un POS excluido: {token.pos_}")
+                            break
+                # If the word is not found in the document, mark the acronym for exclusion
+                if not word_found:
+                    exclude_acronym = True
+                    print(f"The code must not enter here!")
+                    print(f"La palabra '{word}' del acrónimo '{acronym}' no se encuentra en el documento.")
+                    break
+            # If the acronym passes the POS filter, add it to the set of acronyms to keep
+            if not exclude_acronym:
+                acronyms_to_keep.add(acronym)
+                print(f"Acrónimo '{acronym}' ha pasado el filtro POS.")
+
+        print("\nAcrónimos a mantener después de aplicar el filtro POS:", acronyms_to_keep)
+
+        # Filter acronyms based on NER
+        acronyms_to_remove = set()
         for ent in doc.ents:
-            if ent.text.lower() in filtered_acronyms:
-                # Print the NER label of each detected acronym
-                print(f"Acronym '{ent.text}' detected with NER label: {ent.label_}")
-                # If it's LOC or GPE but has 2 or fewer letters, do not remove it
-                if ent.label_ in ["LOC", "GPE"] and len(ent.text) <= 2:
-                    print(f"Acronym '{ent.text}' is of type {ent.label_} with 2 or fewer letters and will not be removed.")
-                    continue
-                if ent.label_ in ["PER", "LOC", "GPE", "TIME", "MONEY"]:
-                    filtered_acronyms.remove(ent.text.lower())
-                    print(f"Acronym '{ent.text}' has been deleted from the list due to NER entity: {ent.label_}")
-        
-        # Initialize lists to collect word and entity information
-        word_details = []
-        entities_details = []
+            ent_text_lower = ent.text.lower().strip()
+            if ent.label_ in ner_labels_to_exclude:
+                print(f"Entity '{ent.text}' detected with ner_labels_to_exclude: {ent.label_}")
+                # Verificar si la entidad coincide con las palabras de los acrónimos a mantener
+                for acronym, words in acronym_words.items():
+                    if any(word == ent_text_lower for word in words):
+                        acronyms_to_remove.add(acronym)
+                        print(f"Acronym '{acronym}' has been deleted due to its NER: {ent.label_}")
 
-        # Collect POS and tag details for filtered acronyms
-        for token in doc:
-            if token.text.lower() in filtered_acronyms:
-                word_info = {
-                    "text": token.text,
-                    "pos": token.pos_,
-                    "tag": token.tag_,
-                    "dep": token.dep_,
-                }
-                word_details.append(word_info)
+        print("\nAcrónimos a eliminar después de aplicar el filtro NER:", acronyms_to_remove)
 
-        # Collect entity information for remaining acronyms
-        for ent in doc.ents:
-            if ent.text.lower() in filtered_acronyms:
-                entity_info = {
-                    "text": ent.text,
-                    "label": ent.label_,
-                }
-                entities_details.append(entity_info)
-
-        # Return the collected information
-        return {"words": word_details, "entities": entities_details}
-
+        # Filtered acronyms due to POS and NER criteria
+        filtered_acronyms = list(acronyms_to_keep - acronyms_to_remove)
+        return filtered_acronyms
 
 '''
 # Example usage
 analyzer = NERTextAnalyzer()
-text1 = "Presp. de ejecución de obras para impermeabilización de cubierta plana de patio interior del edif. anexo a la Comisaría Local de Santiago de Compostela. Coruña"
-detected_acronyms = ["VP", "PK", "LP", "A-6", "suminitro", "FITUR", "Renedo de Esgueva", "Villabañez", "Coruña"]
+text1 = "Servicios de arquitecto para la remodelación de instalaciones que con motivo del proyecto HOGEI URTE se realizarán por parte de Euskalduna Jauregia Palacio Euskalduna, S.A en Bilbao"
+detected_acronyms = ["arquitecto", "instalaciones", "obras", "HOGEI URTE", "Bilbao"]
 
-word_details = analyzer.analyze_text(text1, detected_acronyms)
-
-print("Resultados del Análisis del Texto 1:")
-print("\nPalabras Analizadas:")
-for word_info in word_details['words']:
-    print(f"Texto: {word_info['text']}, POS: {word_info['pos']}, Tag: {word_info['tag']}, Dep: {word_info['dep']}")
-
-print("\nEntidades Detectadas:")
-for entity_info in word_details['entities']:
-    print(f"Texto: {entity_info['text']}, Etiqueta: {entity_info['label']}")
+filtered_acronyms = analyzer.analyze_text(text1, detected_acronyms)
+print(filtered_acronyms)
 '''
+
