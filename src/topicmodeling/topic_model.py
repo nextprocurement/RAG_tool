@@ -187,10 +187,9 @@ class TopicModel(ABC):
             CountVectorizer Model to be used for the BOW calculation
         """
 
-        # Load the processed data
-        
-        # Check if data with additional preprocessing already exists
+        # Path to save preproc data in model fodler        
         preproc_file = pathlib.Path(self.save_path.as_posix()).joinpath(pathlib.Path(self.load_data_path).stem + "_preproc.parquet")
+        
         df = load_processed_data(self.load_data_path)
         
         if further_proc: # remove add stops and equivs

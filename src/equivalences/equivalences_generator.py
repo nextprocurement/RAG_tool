@@ -1,5 +1,6 @@
 import os
 import re
+import time
 from dotenv import load_dotenv
 import dspy
 import logging
@@ -11,12 +12,61 @@ from sklearn.cluster import DBSCAN
 from sklearn.model_selection import train_test_split
 from sentence_transformers import SentenceTransformer
 from dspy.teleprompt import BootstrapFewShotWithRandomSearch
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional, Union
 import ast
 import itertools
 from sentence_transformers.util import cos_sim
-
+from dspy.datasets import Dataset
 from src.topicmodeling.topic_model import BERTopicModel, CtmModel, MalletLdaModel, TopicGPTModel
+from dspy.evaluate import Evaluate
+
+
+#######################################################################
+# TenderDataset
+#######################################################################
+class EquivalencesDataset(Dataset):
+
+    def __init__(
+        self,
+        data_fpath: Union[pathlib.Path, str],
+        dev_size: Optional[float] = 0.2,
+        test_size: Optional[float] = 0.2,
+        input_key: str = "words",
+        seed: Optional[int] = 11235,
+        *args,
+        **kwargs
+    ) -> None:
+        super().__init__(*args, **kwargs)
+
+        self.labels = []
+        self._train = []
+        self._dev = []
+        self._test = []
+
+        # Read the training data
+        train_data = pd.read_excel(data_fpath).rename(columns={
+            'equivalence': 'equivalences',
+            'origin': 'words'})[['words', 'equivalences']]
+
+        train_data, temp_data = train_test_split(
+            train_data, test_size=dev_size + test_size, random_state=seed)
+        dev_data, test_data = train_test_split(
+            temp_data, test_size=test_size / (dev_size + test_size), random_state=seed)
+
+        self._train = [
+            dspy.Example({**row}).with_inputs(input_key) for row in self._convert_to_json(train_data)
+        ]
+        self._dev = [
+            dspy.Example({**row}).with_inputs(input_key) for row in self._convert_to_json(dev_data)
+        ]
+        self._test = [
+            dspy.Example({**row}).with_inputs(input_key) for row in self._convert_to_json(test_data)
+        ]
+
+    def _convert_to_json(self, data: pd.DataFrame):
+        if data is not None:
+            return data.to_dict(orient='records')
+
 
 class TransformNotOptim(dspy.Signature):
     """
@@ -59,7 +109,14 @@ class TransformNotOptim(dspy.Signature):
 
 class TransformOptim(dspy.Signature):
     """
-    Map similar terms to a common form in LANGUAGE, considering lemmatization errors, synonyms, and spelling variations. Return [] if no equivalences are found. 
+    Map similar terms to a common form in LANGUAGE, considering lemmatization errors, synonyms, and spelling variations. Return [] if no equivalences are found.
+    
+    ----------------------------------------------------------------------------
+    Examples
+    --------
+    WORDS: ["calefacció", "calor"]		
+    MAPPED_WORDS: [{"calefacción": calefacció}]
+    ----------------------------------------------------------------------------
 
     Important: The final word must be a single word or multiple words in LANGUAGE joined by an underscore ('_'). 
     Use the simplest form, e.g., choose "digital" over "digitales" and a single word over a compound word, e.g., "proyecto" over "proyecto_básico". 
@@ -76,8 +133,10 @@ class TransformModule(dspy.Module):
         optim: bool = False,
     ):  
         """
-        Initialize the TransformModule.
+        Initialize the TransformModule, which maps similar terms to a common form in LANGUAGE, considering lemmatization errors, synonyms, and spelling variations.
 
+        Parameters
+        ----------
         optim: bool
             Whether to use the optimized version of the module, or the one with default examples
         """
@@ -92,15 +151,29 @@ class TransformModule(dspy.Module):
     def parse_equivalences(
         self,
         equivalences: str,
-        word_embeddings: Dict[str, Any], optim: bool = False
+        word_embeddings: Dict[str, Any], 
+        thr_similarity: float = 0.96
     ) -> List[Dict[str, List[str]]]:
+        """
+        Parse the equivalences string and return a list of dictionaries with the equivalences, following the format:
+        
+        [{"key": ["value1", "value2", ...]}, ...]
+        
+        Parameters
+        ----------
+        equivalences : str
+            A string containing the equivalences in the format of a Python dictionary, returned by the TransformModule for MAPPED_WORDS.
+        word_embeddings : Dict[str, Any]
+            A dictionary containing the word embeddings for the words in the equivalences.
+        """
+        
         try:
             # Safely parse the input string as a Python dictionary
             equivalences = ast.literal_eval(equivalences)
-
+            print(equivalences)
             final_eqs = []
-            
             for el in equivalences:
+                print(el)
                 # Get the first key in the dictionary
                 key = list(el.keys())[0]
 
@@ -120,12 +193,13 @@ class TransformModule(dspy.Module):
                         continue  # Skip if the value is identical to the key
     
                     # If the first 5 characters differ, enforce a stricter similarity threshold
-                    if key[:3] != val[:3]:
+                    
+                    if word_embeddings is not None and key[:3] != val[:3]:
                         try:
                             similarity = cos_sim(word_embeddings[key], word_embeddings[val])
                         except Exception as e:
                             continue
-                        if similarity is None or similarity < 0.96:
+                        if similarity is None or similarity < thr_similarity:
                             continue  # Skip if similarity is below the threshold
                     # If they have the same first 5 characters or similarity is high, add it
                     eq_dict[new_key].append(val)
@@ -141,11 +215,24 @@ class TransformModule(dspy.Module):
             print(equivalences)
             return []    
 
-    def forward(self, words, lang, word_embeddings):
-
-        equivalences = self.parse_equivalences(self.transform(WORDS=words, LANGUAGE=lang).MAPPED_WORDS, word_embeddings)
-
-        return equivalences
+    def forward(
+        self,
+        words: str,
+        word_embeddings: Dict[str, Any] = None,
+        lang: str="spanish",
+        optim: bool = True
+    ):
+        """
+        Forward pass of the module.
+        """
+        
+        out_transform = self.transform(WORDS=words, LANGUAGE=lang).MAPPED_WORDS
+        equivalences = self.parse_equivalences(out_transform, word_embeddings)
+    
+        if not optim:
+            return equivalences
+        else:
+            return dspy.Prediction(equivalences=equivalences)
       
 class HermesEquivalencesGenerator(object):
     
@@ -156,7 +243,7 @@ class HermesEquivalencesGenerator(object):
         path_open_api_key="/export/usuarios_ml4ds/lbartolome/NextProcurement/NP-Search-Tool/.env",
         use_optimized: bool = False,
         do_train: bool = False,
-        data_path: str = None,
+        data_path: str = "/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/training_data/dataset_eqs.xlsx",
         trained_promt: str = pathlib.Path(
             __file__).parent.parent.parent / "data/optimized/HermesEquivalencesGenerator-saved.json",
         trf_model: str = 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2',
@@ -169,6 +256,14 @@ class HermesEquivalencesGenerator(object):
         
         Parameters
         ----------
+        model_type : str, optional
+            Type of model to use, by default "llama"
+        open_ai_model : str, optional
+            OpenAI model to use, by default "gpt-3.5-turbo"
+        path_open_api_key : str, optional
+            Path to OpenAI API key.
+        use_optimized : bool, optional
+            Whether to use the optimized version of the module, by default False
         do_train : bool, optional
             Whether to train the module, by default False
         data_path : str, optional
@@ -183,7 +278,7 @@ class HermesEquivalencesGenerator(object):
             Path to logs directory, by default pathlib.Path(__file__).parent.parent / "data/logs"
         """
         
-        self._logger = logging.getLogger(__name__) # TODO: chekc (init_logger)
+        self._logger = logging.getLogger(__name__)
         self._model = SentenceTransformer(trf_model)
         
         # Dspy settings
@@ -198,7 +293,6 @@ class HermesEquivalencesGenerator(object):
         dspy.settings.configure(lm=self.lm)
         
         if not use_optimized:
-
             self.module = TransformModule(optim=False)
         elif use_optimized and not do_train:
             if not pathlib.Path(trained_promt).exists():
@@ -208,14 +302,27 @@ class HermesEquivalencesGenerator(object):
             self.module.load(trained_promt)
             self._logger.info(f"-- -- TransformModule loaded from {trained_promt}")
         else:
-            # TODO: Implement training
             if not data_path:
-                self._logger.error("Data path is required for training. Exiting.")
+                self._logger.error("-- -- Data path is required for training. Exiting.")
                 return
             self._train_module(data_path, trained_promt)
             
-    def _create_model(self, model_name, **kwargs):
-
+    def _create_model(
+        self,
+        model_name: str,
+        **kwargs: Dict[str, Any]
+    ) -> Any:
+        """
+        Instantiate a topic model based on the model name and keyword arguments.
+        
+        Parameters
+        ----------
+        model_name : str
+            Name of the model to instantiate.
+        **kwargs : Dict[str, Any]
+            Keyword arguments to pass to the model constructor, specific to each model.
+        """
+        
         model_mapping = {
             'MalletLda': MalletLdaModel,
             'Ctm': CtmModel,
@@ -235,9 +342,34 @@ class HermesEquivalencesGenerator(object):
 
         return model_instance
     
-    def _get_clusters(self, embeddings, eps=0.05, min_samples=2, metric='cosine'):
+    def _get_clusters(
+        self,
+        embeddings: np.ndarray,
+        eps: float = 0.05,
+        min_samples: int = 2,
+        metric: str = 'cosine'
+    ) -> List[int]:
+        """
+        Partition the embeddings into clusters using DBSCAN.
         
-        dbscan = DBSCAN(eps=eps, min_samples=min_samples, metric='cosine')
+        Parameters
+        ----------
+        embeddings : np.ndarray
+            An array of embeddings to cluster.
+        eps : float, optional
+            The maximum distance between two samples for one to be considered as in the neighborhood of the other, by default 0.05
+        min_samples : int, optional
+            The number of samples in a neighborhood for a point to be considered as a core point, by default 2
+        metric : str, optional
+            The distance metric to use, by default 'cosine'
+            
+        Returns
+        -------
+        list
+            A list of cluster labels for each embedding
+        """
+        
+        dbscan = DBSCAN(eps=eps, min_samples=min_samples, metric=metric)
         labels = dbscan.fit_predict(embeddings)
 
         # Count number of clusters (excluding noise labeled as -1)
@@ -250,8 +382,23 @@ class HermesEquivalencesGenerator(object):
         
         return labels
     
-    def _get_embeddings(self, word_list):
-    
+    def _get_embeddings(
+        self,
+        word_list: List[str]
+    ) -> Dict[str, np.ndarray]:
+        """
+        Get the SBERT embeddings for a list of words using the model self._trf_model.
+        
+        Parameters
+        ----------
+        word_list : list
+            A    list of words for which to get embeddings.
+        
+        Returns
+        -------
+        dict
+            A dictionary where the keys are words and the values are their embeddings.
+        """
         # Calculate embeddings
         embeddings = self._model.encode(word_list)
         
@@ -259,7 +406,11 @@ class HermesEquivalencesGenerator(object):
         
         return embedding_dict
 
-    def _get_words_by_cluster(self, labels, words):
+    def _get_words_by_cluster(
+        self,
+        labels: List[int],
+        words: List[str]
+    ):
         """
         Create a dictionary where the keys are cluster IDs and the values are lists of words belonging to each cluster.
         Handles noise points (label = -1) separately.
@@ -289,7 +440,7 @@ class HermesEquivalencesGenerator(object):
         
         # Iterate over all words and their corresponding labels
         for word_id, word in enumerate(words):
-            cluster_id = labels[word_id]  # Get the cluster ID for this word
+            cluster_id = labels[word_id]
             if cluster_id == -1:
                 cluster_to_words['noise'].append(word)  # Add noise points to 'noise'
             else:
@@ -297,82 +448,148 @@ class HermesEquivalencesGenerator(object):
         
         return cluster_to_words
 
-    def _train_module(self, data_path, trained_promt):
+    def _train_module(
+        self,
+        data_path: str,
+        trained_promt: str
+    ) -> None:
         """
-        Trains the AcronymDetectorModule and saves the trained model.
+        Trains the TransformModule and saves the trained model.
+        
+        Parameters
+        ----------
+        data_path : str
+            Path to the data file with training examples.
+        trained_promt : str
+            Path to save the trained model.
         """
-        self._logger.info("Training AcronymDetectorModule...")
+        self._logger.info("Training TransformModule...")
         self.module = self.optimize_module(data_path)
-        self._logger.info("AcronymDetectorModule optimized.")
+        self._logger.info("TransformModule optimized.")
         self.module.save(trained_promt)
 
-    def validate_acronym_detection(self, example, pred, trace=None):
+    def validate_equivalences(self, example, pred, trace=None):
+        """Function to validate the equivalences predicted by the module during optimization.
+        
+        Parameters
+        ----------
+        example : dspy.Example
+            An example from the dataset.
+        pred : dspy.Prediction
+            The prediction made by the module.
+            
+        Returns
+        -------
+        float
+            A score between 0 and 1 representing the quality of the predicted equivalences, calculated as the average of the normalized key and word scores. The key score is the number of matching keys divided by the total number of keys in the ground truth equivalences. The word score is the number of matching words divided by the total number of words in the ground truth equivalences.
         """
-        Validates if the predicted acronym is present in the example text.
-        Returns 1 if the acronym is present or correctly predicted (there are texts without acronyms) as '/', otherwise 0.
-        """
-        # Normalize text (where acronym its ideally contained) and predicted acronym to lowercase
-        text_lower = example['texto'].lower()
-        pred_acronym_lower = pred.ACRONYMS.lower()
+        
+        ground_eq = ast.literal_eval(example['equivalences'])
+        ground_eq_lst = []
+        for el in ground_eq:
+            # Get the first key in the dictionary
+            key = list(el.keys())[0]
+            values = [el.strip() for el in el[key].split(",")]
+            ground_eq_lst.append({key: values})
+        pred_eq_lst = pred.equivalences
+        
+        print(f"Ground: {ground_eq_lst}")
+        print(f"Pred: {pred_eq_lst}")
+        
+        # Initialize counters for scores
+        matching_keys_count = 0
+        matching_words_count = 0
+        total_words_in_ground_eq = 0
 
-        if pred_acronym_lower == '/':
-            if example['detected_acronimos'] == '/':  
-                print("Correctly identified no acronyms in the text.")
-                return 1
-            else:
-                print(f"Error: Returned '/' but acronyms are present: {example['detected_acronimos']}")
-                return 0
+        # Convert pred_eq_lst and ground_eq_lst to a more convenient format (dict with key-value pairs)
+        pred_dict = {list(item.keys())[0]: list(item.values())[0] for item in pred_eq_lst}
+        ground_dict = {list(item.keys())[0]: list(item.values())[0] for item in ground_eq_lst}
 
-        if pred_acronym_lower in text_lower:
-            print(f"The acronym '{pred_acronym_lower}' is present in the text.")
-            return 1
+        # Total number of keys in ground_eq_lst
+        total_keys_in_ground_eq = len(ground_dict)
+
+        # Count the matching keys and words
+        for key in ground_dict:
+            if key in pred_dict:
+                matching_keys_count += 1
+                
+                # Count matching words in the values list
+                ground_values = set(ground_dict[key])
+                pred_values = set(pred_dict[key])
+                
+                matching_words = ground_values.intersection(pred_values)
+                matching_words_count += len(matching_words)
+                
+                # Keep track of total words in ground equivalences for normalization
+                total_words_in_ground_eq += len(ground_values)
+
+        # If there are no keys or words in ground_eq_lst, avoid division by zero
+        if total_keys_in_ground_eq > 0:
+            normalized_key_score = matching_keys_count / total_keys_in_ground_eq
         else:
-            print(f"The acronym '{pred_acronym_lower}' is not present in the text.")
-            return 0
+            normalized_key_score = 0
 
-    def create_dtset_detected_acronyms(self, df):
-        
-        df = df[['text', 'detected_acr']]
+        if total_words_in_ground_eq > 0:
+            normalized_word_score = matching_words_count / total_words_in_ground_eq
+        else:
+            normalized_word_score = 0
 
-        # Dividir los datos en conjuntos de entrenamiento y validación
-        train_df, test_df = train_test_split(df, test_size=0.3, random_state=42)
-
-        # Convertir los df de train y dev en listas de diccionarios
-        data_train = train_df.to_dict('records')
-        data_test = test_df.to_dict('records')
-
-        # Training set examples with configured inputs
-        trainset = [
-            dspy.Example({'texto': row['text'], 'detected_acronimos': row['detected_acr']})
-            .with_inputs('texto') for row in data_train
-        ]
-        
-        # Test set examples with configured inputs
-        devset = [
-            dspy.Example({'texto': row['text'], 'detected_acronimos': row['detected_acr']})
-            .with_inputs('texto') for row in data_test
-        ]
-
-        return trainset, devset
-    
-    def optimize_module(self, data_path, max_bootstrapped_demos=4, max_labeled_demos=16, num_candidate_programs=16, max_rounds=1):
+        return (normalized_key_score + normalized_word_score) / 2
+            
+    def optimize_module(self, data_path, mbd=4, mld=16, ncp=2, mr=1, dev_size=0.25): 
         """
         Optimizes the AcronymDetectorModule based on the data provided.
         """
-        df = pd.read_excel(data_path)
-        df = df[['text', 'detected_acr']]
-
-        tr_ex, test_ex = self.create_dtset_detected_acronyms(df)
-
-        teleprompter = BootstrapFewShotWithRandomSearch(
-            metric=self.validate_acronym_detection,
-            max_bootstrapped_demos=max_bootstrapped_demos,
-            max_labeled_demos=max_labeled_demos,
-            num_candidate_programs=num_candidate_programs,
-            max_rounds=max_rounds,
+        # Create dataset
+        dataset = EquivalencesDataset(
+            data_fpath=data_path,
+            dev_size=dev_size,
         )
-        compiled_model = teleprompter.compile(AcronymDetectorModule(), trainset=tr_ex, valset=test_ex)
-        return compiled_model
+                
+        self._logger.info(f"-- -- Dataset loaded from {data_path}")
+
+        trainset = dataset._train
+        devset = dataset._dev
+        testset = dataset._test
+
+        self._logger.info(
+            f"-- -- Dataset split into train, dev, and test. Training module...")
+
+        config = dict(max_bootstrapped_demos=mbd, max_labeled_demos=mld,
+                      num_candidate_programs=ncp, max_rounds=mr)
+        teleprompter = BootstrapFewShotWithRandomSearch(
+            metric=self.validate_equivalences, **config)
+
+        compiled_pred = teleprompter.compile(
+            TransformModule(optim=True), trainset=trainset, valset=devset)
+
+        self._logger.info(f"-- -- Module compiled. Evaluating on test set...")
+        
+        # Apply on test set
+        tests = []
+        for el in testset:
+            output = compiled_pred(el.words)
+            tests.append([el.words, el.equivalences,
+                          output["equivalences"], 
+                          self.validate_equivalences(el, output)])
+            
+        df = pd.DataFrame(
+            tests, columns=["ORIGIN", "GROUND_EQ", "PREDICTED_EQ", "METRIC"])
+        
+        print(f"## Test set results ##")
+        print(df.head())
+        evaluate = Evaluate(
+            devset=devset, metric=self.validate_equivalences, num_threads=1, display_progress=True)
+        compiled_score = evaluate(compiled_pred)
+        uncompiled_score = evaluate(TransformModule(optim=True))
+
+        print(
+            f"## TransformModule Score for uncompiled: {uncompiled_score}")
+        print(
+            f"## TransformModule Score for compiled: {compiled_score}")
+        print(f"Compilation Improvement: {compiled_score - uncompiled_score}%")
+
+        return compiled_pred
     
     def generate_equivalences(
         self,
@@ -380,6 +597,8 @@ class HermesEquivalencesGenerator(object):
         path_to_source: str = None,
         model_type: str = "MalletLda",
         language: str = "spanish",
+        path_save: str = "/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/src/topicmodeling/data/equivalences/cpv45_equivalences_test_vocab.json",
+        optim: bool = False
     ):
         """
         Generate equivalences for the given words and language.
@@ -433,15 +652,16 @@ class HermesEquivalencesGenerator(object):
 
         ######################################################################### Generate equivalences
         ########################################################################
+        time_start = time.time()
         equivalences = []
         for el in word_groups:
             try:
-                equivalences.append([el, self.module(str(el), language, word_embeddings)])
+                equivalences.append([el, self.module(words=str(el), lang=language, word_embeddings=word_embeddings, optim=optim)])
             except Exception as e:
                 print(e)
         
         df = pd.DataFrame(equivalences, columns= ["origin", "equivalence"])
-        
+
         # filter empty equivalences
         df = df[df['equivalence'].str.len() > 0]
         print(df.head())
@@ -464,5 +684,7 @@ class HermesEquivalencesGenerator(object):
         }
 
         # Write the JSON data to a file
-        with open('/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/src/topicmodeling/data/equivalences/cpv45_equivalences_test.json', 'w') as json_file:
+        with open(path_save, 'w') as json_file:
             json.dump(json_data, json_file, indent=4, ensure_ascii=False)
+        
+        print(f"Time elapsed in generation: {time.time() - time_start}")

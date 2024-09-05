@@ -1,0 +1,89 @@
+{
+  "transform": {
+    "lm": null,
+    "traces": [],
+    "train": [],
+    "demos": [
+      {
+        "augmented": true,
+        "WORDS": "['cuarto', 'habitaci\u00f3n']",
+        "LANGUAGE": "spanish",
+        "rationale": "produce the MAPPED_WORDS. We...",
+        "MAPPED_WORDS": "[{'habitaci\u00f3n': 'cuarto'}]"
+      },
+      {
+        "augmented": true,
+        "WORDS": "['estructural', 'estructura']",
+        "LANGUAGE": "spanish",
+        "rationale": "produce the MAPPED_WORDS. We...",
+        "MAPPED_WORDS": "[{'estructura': 'estructural'}]"
+      },
+      {
+        "augmented": true,
+        "WORDS": "['escuelas', 'escolar', 'colegio', 'escuela']",
+        "LANGUAGE": "spanish",
+        "rationale": "produce the MAPPED_WORDS. We...",
+        "MAPPED_WORDS": "[{'escuela': 'escuelas'}, {'escuela': 'escolar'}, {'escuela': 'colegio'}, {'escuela': 'escuela'}]"
+      },
+      {
+        "augmented": true,
+        "WORDS": "['demolici\u00f3n_edificaci\u00f3n', 'demolici\u00f3n_infravivienda', 'demolici\u00f3n_parcial']",
+        "LANGUAGE": "spanish",
+        "rationale": "produce the MAPPED_WORDS. We...",
+        "MAPPED_WORDS": "[{'demolici\u00f3n': 'demolici\u00f3n_edificaci\u00f3n'}, {'demolici\u00f3n': 'demolici\u00f3n_infravivienda'}, {'demolici\u00f3n': 'demolici\u00f3n_parcial'}]"
+      },
+      {
+        "words": "['estrategia_desarrollo', 'estrategias_desarrollo']",
+        "equivalences": "[{'estrategia': 'estrategias_desarrollo'}]"
+      },
+      {
+        "words": "['sustitucion', 'sustituir', 'substituci\u00f3', 'sustituci\u00f3n']",
+        "equivalences": "[{'sustituci\u00f3n':'sustituir, sustitucion, substituci\u00f3'}]"
+      },
+      {
+        "words": "['junta_castilla', 'junta_andaluc\u00eda']",
+        "equivalences": "[{'junta': 'junta_castilla, junta_andaluc\u00eda'}]"
+      },
+      {
+        "words": "['comunidad_regantes', 'comunidad_valenciana']",
+        "equivalences": "[]"
+      },
+      {
+        "words": "['externo', 'exterior']",
+        "equivalences": "[{'exterior': 'exterior'}]"
+      },
+      {
+        "words": "['patolog\u00eda', 'patolog\u00edas']",
+        "equivalences": "[{'patolog\u00eda': 'patolog\u00edas'}]"
+      },
+      {
+        "words": "['energ\u00e9tica_alumbrado', 'energ\u00e9tico_alumbrado', 'energ\u00eda_limpio']",
+        "equivalences": "[{'alumbrado': 'energ\u00e9tica_alumbrado, energ\u00e9tico_alumbrado'}]"
+      },
+      {
+        "words": "['burgos', 'villar']",
+        "equivalences": "[]"
+      },
+      {
+        "words": "['edificio', 'edifici']",
+        "equivalences": "[{'edificio': 'edifici'}]"
+      },
+      {
+        "words": "['abad', 'siglo']",
+        "equivalences": "[]"
+      },
+      {
+        "words": "['barranco', 'barranc']",
+        "equivalences": "[{'barranco': 'barranc'}]"
+      },
+      {
+        "words": "['medioambiental', 'ambiental']",
+        "equivalences": "[{'medioambiental': 'ambiental'}]"
+      }
+    ],
+    "signature_instructions": "\n    Map similar terms to a common form in LANGUAGE, considering lemmatization errors, synonyms, and spelling variations. Return [] if no equivalences are found.\n    \n    ----------------------------------------------------------------------------\n    Examples\n    --------\n    WORDS: [\"calefacci\u00f3\", \"calor\"]\t\t\n    MAPPED_WORDS: [{\"calefacci\u00f3n\": calefacci\u00f3}]\n    ----------------------------------------------------------------------------\n\n    Important: The final word must be a single word or multiple words in LANGUAGE joined by an underscore ('_'). \n    Use the simplest form, e.g., choose \"digital\" over \"digitales\" and a single word over a compound word, e.g., \"proyecto\" over \"proyecto_b\u00e1sico\". \n    If it applies, the final word should be a noun over an adverb, adjective or verb.\n    ",
+    "signature_prefix": "MAPPED WORDS:",
+    "extended_signature_instructions": "\n    Map similar terms to a common form in LANGUAGE, considering lemmatization errors, synonyms, and spelling variations. Return [] if no equivalences are found.\n    \n    ----------------------------------------------------------------------------\n    Examples\n    --------\n    WORDS: [\"calefacci\u00f3\", \"calor\"]\t\t\n    MAPPED_WORDS: [{\"calefacci\u00f3n\": calefacci\u00f3}]\n    ----------------------------------------------------------------------------\n\n    Important: The final word must be a single word or multiple words in LANGUAGE joined by an underscore ('_'). \n    Use the simplest form, e.g., choose \"digital\" over \"digitales\" and a single word over a compound word, e.g., \"proyecto\" over \"proyecto_b\u00e1sico\". \n    If it applies, the final word should be a noun over an adverb, adjective or verb.\n    ",
+    "extended_signature_prefix": "MAPPED WORDS:"
+  }
+}
