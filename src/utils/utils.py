@@ -4,6 +4,9 @@ import pandas as pd
 import re
 import nltk
 import yaml
+import json
+import os
+import time
 import logging
 from time import sleep
 from nltk.tokenize import sent_tokenize
@@ -12,6 +15,52 @@ from src.acronyms.acronym_expander import AcronymExpanderModule
 from src.utils.vector_store_utils import Chunker
 from src.acronyms.check_candidate import NERTextAnalyzer
 
+def generate_acronym_expansion_json(file_path, output_dir):
+    """
+    Generate a JSON file containing the acronyms and their expansions from an Excel file.
+    df: Dataframe containing the acronyms and expansions, with columns
+                'Acronyms Detected(LLM)' and 'Expansions'.
+    output_dir: Path to the directory where the JSON file will be saved.
+    """
+    #Load the Excel file into a DataFrame
+    print(f"Loading excel file from: {file_path}")
+    df_out = pd.read_excel(file_path)
+    print(f"File with {len(df_out)} rows loaded.")
+
+    acronym_expansion_dict = {}
+    for index, row in df_out.iterrows():
+        print(f"Processing row {index + 1} of {len(df_out)}...")
+        # Obtain the acronyms and expansions from the DataFrame
+        acronyms = row['Acronyms Detected(LLM)'].split(',')
+        expansions = row['Expansions'].split(',')
+
+        # Clean and format the acronyms and expansions
+        acronyms = [acronym.strip() for acronym in acronyms]
+        expansions = [expansion.strip().replace(' ', '_') for expansion in expansions]
+
+        # Associate each acronym with its expansion
+        for acronym, expansion in zip(acronyms, expansions):
+            # Add the acronym and expansion to the dictionary
+            if expansion != '/':
+                acronym_expansion_dict[acronym] = expansion
+                #print(f"Añadiendo al diccionario: {acronym} -> {expansion}")
+
+    file_name = os.path.splitext(os.path.basename(file_path))[0]
+    json_name = f"{file_name}_equivalences.json"
+
+    json_data = {
+        "name": file_name,
+        "description": "",
+        "valid_for": "acronyms",
+        "visibility": "Public",
+        "wordlist": [f"{key}:{value}" for key, value in acronym_expansion_dict.items()]
+    }
+    # Path to save the JSON file
+    output_path = os.path.join(output_dir, json_name)
+    with open(output_path, 'w', encoding='utf-8') as file:
+        json.dump(json_data, file, ensure_ascii=False, indent=4)
+    print("JSON file saved correctly.")
+    
 def process_dataframe(
     path,
     config,
@@ -229,7 +278,7 @@ def filter_items_and_acronyms(items):
     filtered_items = [
         item for item in items
         if len(item) <= 14
-        and len(item.split()) <= 2
+        and len(item.split()) = 1
         and sum(c.isdigit() for c in item) <= 3
         and len(item) > 1
         and not item.isdigit()

@@ -7,8 +7,9 @@ import dspy
 from dotenv import load_dotenv
 from src.utils.utils import init_logger
 from src.utils.utils import process_dataframe
+from src.utils.utils import generate_acronym_expansion_json
 from src.utils.vector_store_utils import Chunker
-from dspy.primitives.assertions import assert_transform_module, backtrack_handler
+#from dspy.primitives.assertions import assert_transform_module, backtrack_handler
 import functools
 from src.acronyms.acronym_expander import HermesAcronymExpander, AcronymExpanderModule
 from src.acronyms.acronym_detector import HermesAcronymDetector, AcronymDetectorModule
@@ -75,7 +76,7 @@ if __name__ == "__main__":
     dspy.settings.configure(lm=lm, temperature=0)
     # It seems to be mandatory to configure the settings of dspy backtracking before using it
     # Configuration of dspy backtracking
-    dspy.settings.configure(trace=[])
+    #dspy.settings.configure(trace=[])
     
     # Initialize the acronym detector and expander    
     expander = None
@@ -204,7 +205,7 @@ if __name__ == "__main__":
             logger=logger
         )
     except Exception as e:
-        logger.error(f"Ocurrió un error al procesar el DataFrame: {str(e)}")
+        logger.error(f"Error occured processing dataframe: {str(e)}")
         raise e
         
     # Save df in a new Excel file with the same name as the input file plus '_out'
@@ -223,3 +224,11 @@ if __name__ == "__main__":
     df_out.to_excel(path_out, index=False)
     # Report the path of the saved file
     logger.info(f"DataFrame procesado con la acción '{args.action}' y guardado en {path_out}")
+    
+    # Generate JSON with detected and expanded acronyms only with both args
+    if args.action == "both":
+        path_sal = '/export/usuarios_ml4ds/cggamella/RAG_tool/src/topicmodeling/data/acronyms/'
+        generate_acronym_expansion_json(path_out, path_sal)
+        logger.info(f"JSON with detected and expanded acronyms saved on {path_sal}")
+    
+    

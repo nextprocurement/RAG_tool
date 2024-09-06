@@ -1,8 +1,10 @@
 import dspy
 import logging
 import json
+import ujson
 import pandas as pd
 import pathlib
+from time import sleep
 from sklearn.model_selection import train_test_split
 from dspy.primitives.assertions import DSPySuggestionError
 from sentence_transformers import SentenceTransformer
@@ -30,6 +32,7 @@ class AcronymDetector(dspy.Signature):
     TEXT = dspy.InputField()
     ACRONYMS = dspy.OutputField(desc="list of comma-separated acronyms", format=lambda x: ', '.join(x) if isinstance(x, list) else x)
 
+
 class AcronymDetectorModule(dspy.Module):
     def __init__(self):
         super().__init__()
@@ -37,18 +40,28 @@ class AcronymDetectorModule(dspy.Module):
         
         self.no_acronym_variations = [
             '/', '/ (no acronyms)', '', '${TEXT}', '${ACRONYMS}', '/ (no hay acrónimos)',
-            '(NO ACRONYMS)', 'no acronyms','sin acronimos', 'sin acrónimos',
-            '/ (No acronyms present in the document)', 
+            '(NO ACRONYMS)',"\/",'no acronyms','sin acronimos', 'sin acrónimos',
+            '/ (No acronyms present in the document)', '\/', '/',
             '/ (not present in the document)', "'/'", 'N/A', '/.', 'N_A', 'NA', '""', 'c', 'a', 'n',
             'o', 's', 'i', 'r', 'm', 't', 'd', 'e', 'l', 'p', 'b', 'u', 'q', 'v', 'g', 'f', 'h', 'j', 'z', 'x', 'k', 'w', 'y'
         ]
+        
+    def dump_state(self, save_verbose=False, ensure_ascii=False, escape_forward_slashes=False):
+        print(self.named_parameters())
+        return {name: param.dump_state() for name, param in self.named_parameters()}
     
+    def save(self, path, save_field_meta=False):
+        print("*"*50)
+        sleep(5)
+        with open(path, "w") as f:
+            f.write(ujson.dumps(self.dump_state(save_field_meta), indent=2, ensure_ascii=False, escape_forward_slashes=False))
+            
     def _process_output(self, texto):
         if texto in self.no_acronym_variations:
             return "/"
         else:
             return texto
-    
+              
     # Useless function if Suggest is NOT used in the forward method
     def verify_acronyms(self, texto, acronyms):
         """
@@ -126,11 +139,14 @@ class HermesAcronymDetector:
             self.module = AcronymDetectorModule()
             self.module.load(trained_promt)
             self._logger.info(f"AcronymDetectorModule loaded from {trained_promt}")
+            print("EL trained prompt sin entrenamiento es:", trained_promt)
         else:
             if not data_path:
                 self._logger.error("Data path is required for training. Exiting.")
                 return
             self._train_module(data_path, trained_promt)
+            print("EL trained prompt CON entrenamiento es:", trained_promt)
+
 
     def _train_module(self, data_path, trained_promt):
         """

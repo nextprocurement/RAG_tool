@@ -2,7 +2,7 @@ import logging
 import pathlib
 import re
 from typing import List, Union
-
+import json
 import contractions
 import dask.dataframe as dd
 import pandas as pd
@@ -46,6 +46,8 @@ class Pipe():
             Maximum length of the text to be processed
         raw_text_cols : List[str]
             List of columns containing the raw text to be preprocessed
+        path_add_acr: str
+            Path to acronyms JSON file
         logger: Logger object
             To log object activity
         """
@@ -59,7 +61,7 @@ class Pipe():
 
         # Load stopwords and acronyms
         self._loadSTW(stw_files)
-        self._loadACR(language, path_add_acr)
+        self._loadACR(path_add_acr)
 
         # Download spaCy model if not already downloaded and load
         self._nlp = load_spacy(spaCy_model, exclude=['parser', 'ner'])
@@ -89,16 +91,37 @@ class Pipe():
 
         return
 
-    def _loadACR(self, lang: str, path_add_acr:str =None) -> None:
+    def _loadACR(self, path_add_acr:str=None) -> None:
         """
-        Loads list of acronyms
+        Load list of acronyms from JSON file and transform it into a list of tuples.
+        Parameters
+        ----------
+        path_add_acr: str
+            Path to acronyms JSON file
         """
+        try:
+            
+            with open(path_add_acr, 'r', encoding='utf-8') as file:
+                data = json.load(file)
 
-        self._acr_list = acronyms.en_acronyms_list if lang == 'en' else acronyms.es_acronyms_list
+            acronyms_list = []
+            # Process each item in the JSON file
+            for item in data['wordlist']:
+                key, value = item.split(':')
+                # Format the key as a regex word boundary
+                regex = r'\b{}\b'.format(re.escape(key))
+                # Add the regex and value to the list
+                acronyms_list.append((regex, value))
         
-        # TODO: Load additional acronyms from file
-        df = pd.read_excel(path_add_acr)
-        # TODO: Transform and add to self._acr_list
+            self.acr_list = acronyms_list
+            self._logger.info(
+                f"-- -- Acronyms list created with {len(acronyms_list)} items."
+            )
+            
+        except FileNotFoundError:
+            print(f"File not found in: {path_add_acr}")
+        except Exception as e:
+            print(f"An error occured: {e}")
 
         return
 

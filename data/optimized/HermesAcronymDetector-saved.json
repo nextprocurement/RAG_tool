@@ -6,76 +6,76 @@
     "demos": [
       {
         "augmented": true,
-        "TEXT": "Actuacion por seguridad vial. Construcci\u00f3n de aceras en la Carretera RM-560 P.K. 9+000 T.M. de Alcantarilla",
+        "TEXT": "Actuacion por seguridad vial. Construcción de aceras en la Carretera RM-560 P.K. 9+000 T.M. de Alcantarilla",
         "rationale": "produce the ACRONYMS. We...",
         "ACRONYMS": "RM-560"
       },
       {
         "augmented": true,
-        "TEXT": "Contrato basado 114 2017 6625.  SP20 Reparaci\u00f3n de la instalaci\u00f3n deportiva municipal Puerto de Monasterio",
+        "TEXT": "Contrato basado 114 2017 6625.  SP20 Reparación de la instalación deportiva municipal Puerto de Monasterio",
         "rationale": "produce the ACRONYMS. We...",
         "ACRONYMS": "SP20"
       },
       {
-        "texto": "Seguro de veh\u00edculos (Derivado del Acuerdo Marco siguiente: Acuerdo Marco para la contrataci\u00f3n de coberturas del seguro de veh\u00edculos a trav\u00e9s de la Central de Contrataci\u00f3n Foral)",
-        "detected_acronimos": "\/"
+        "texto": "Seguro de vehículos (Derivado del Acuerdo Marco siguiente: Acuerdo Marco para la contratación de coberturas del seguro de vehículos a través de la Central de Contratación Foral)",
+        "detected_acronimos": "/"
       },
       {
-        "texto": "Lavander\u00eda de ropa hospitalar\u00eda para Centros dependientes del Servicio Madrile\u00f1o de Salud",
-        "detected_acronimos": "\/"
+        "texto": "Lavandería de ropa hospitalaría para Centros dependientes del Servicio Madrileño de Salud",
+        "detected_acronimos": "/"
       },
       {
         "texto": "Acuerdo Marco para el suministro de conservas, mermeladas, zumos, miel, ahumados, salazones y platos preparados",
-        "detected_acronimos": "\/"
+        "detected_acronimos": "/"
       },
       {
-        "texto": "Servicios de arquitecto para la remodelaci\u00f3n de instalaciones que con motivo del proyecto HOGEI URTE se realizar\u00e1n por parte de Euskalduna Jauregia Palacio Euskalduna, S.A ",
+        "texto": "Servicios de arquitecto para la remodelación de instalaciones que con motivo del proyecto HOGEI URTE se realizarán por parte de Euskalduna Jauregia Palacio Euskalduna, S.A ",
         "detected_acronimos": "S.A"
       },
       {
-        "texto": "Contrato basado 114 2017 6543. E4 Auditorio Entrev\u00edas, obras de remodelaci\u00f3n",
-        "detected_acronimos": "\/"
+        "texto": "Contrato basado 114 2017 6543. E4 Auditorio Entrevías, obras de remodelación",
+        "detected_acronimos": "/"
       },
       {
-        "texto": "OBRA COMPLEMENTARIA para la Construcci\u00f3n de un CEIP en Arroyo de la Encomienda (Valladolid)",
+        "texto": "OBRA COMPLEMENTARIA para la Construcción de un CEIP en Arroyo de la Encomienda (Valladolid)",
         "detected_acronimos": "CEIP"
       },
       {
         "texto": "Limpieza de los Edificios de la Agencia Tributaria Madrid",
-        "detected_acronimos": "\/"
+        "detected_acronimos": "/"
       },
       {
-        "texto": "Servicio de apoyo a las siguientes arenas de gesti\u00f3n: sistema integrado de atenci\u00f3n a la ciudadan\u00eda; medici\u00f3n de las cargas de trabajo de los empleados p\u00fablicos; impulso de la gesti\u00f3n de la calidad, transparencia y eficiencia en el sector p\u00fablico auton\u00f3mico.",
-        "detected_acronimos": "\/"
+        "texto": "Servicio de apoyo a las siguientes arenas de gestión: sistema integrado de atención a la ciudadanía; medición de las cargas de trabajo de los empleados públicos; impulso de la gestión de la calidad, transparencia y eficiencia en el sector público autonómico.",
+        "detected_acronimos": "/"
       },
       {
-        "texto": "Contrato de suministro e instalaci\u00f3n de armarios compactos deslizables sobre ra\u00edles con destino al Archivo Central del ECIT para la Unidad Org\u00e1nica de Apoyo al Consejo de Gobierno y al Consejero, Secretario, Fe Publica y de Archivo y Documentaci\u00f3n",
+        "texto": "Contrato de suministro e instalación de armarios compactos deslizables sobre raíles con destino al Archivo Central del ECIT para la Unidad Orgánica de Apoyo al Consejo de Gobierno y al Consejero, Secretario, Fe Publica y de Archivo y Documentación",
         "detected_acronimos": "ECIT"
       },
       {
-        "texto": "Prestaci\u00f3n del servicio de redacci\u00f3n de documentaci\u00f3n t\u00e9cnica relativa a la ordenaci\u00f3n de espacios para la ubicaci\u00f3n de dependencias municipales en el Edificio Easo",
-        "detected_acronimos": "\/"
+        "texto": "Prestación del servicio de redacción de documentación técnica relativa a la ordenación de espacios para la ubicación de dependencias municipales en el Edificio Easo",
+        "detected_acronimos": "/"
       },
       {
-        "texto": "Contrataci\u00f3n del seguro todo riesgo de da\u00f1os materiales del Hospital Universitario Fundaci\u00f3n Alcorc\u00f3n",
-        "detected_acronimos": "\/"
+        "texto": "Contratación del seguro todo riesgo de daños materiales del Hospital Universitario Fundación Alcorcón",
+        "detected_acronimos": "/"
       },
       {
-        "texto": "Suministro de sueros de irrigaci\u00f3n y lavado con destino a los centros sanitarios dependientes del Servicio Murciano de Salud, mediante licitaci\u00f3n electr\u00f3nica.",
-        "detected_acronimos": "\/"
+        "texto": "Suministro de sueros de irrigación y lavado con destino a los centros sanitarios dependientes del Servicio Murciano de Salud, mediante licitación electrónica.",
+        "detected_acronimos": "/"
       },
       {
         "texto": "Contrato basado 114 2017 6673. Vestuarios Arbolitos.",
-        "detected_acronimos": "\/"
+        "detected_acronimos": "/"
       },
       {
-        "texto": "Suministro de un sistema de direccionamiento y llamada para pacientes en consultas externas y hospital de d\u00eda y de informaci\u00f3n a familiares de pacientes atendidos en quir\u00f3fanos para el Hospital Universitario de Fuenlabrada y CEP",
+        "texto": "Suministro de un sistema de direccionamiento y llamada para pacientes en consultas externas y hospital de día y de información a familiares de pacientes atendidos en quirófanos para el Hospital Universitario de Fuenlabrada y CEP",
         "detected_acronimos": "CEP"
       }
     ],
-    "signature_instructions": "\n    Given a text identify the acronyms contained in it. If none are present in the text, say '\/'.\n    ----------------------------------------------------------------------------\n    Examples\n    --------\n    TEXT: \"El pib en Espa\u00f1a ha subido un 2% en el \u00faltimo trimestre. En la UE se ha registrado un aumento del 3%.\"]\n    ACRONYMS: pib, UE\n    \n    TEXT: \"Trabajos de sondeos del terreno y Estudio geot\u00e9cnico en el CEIP JACARANDA, sito en la C\/ Italo Cortella s\/n , del Distrito Alcosa-Este Torreblanca(Sevilla)\"]\n    ACRONYMS: CEIP, C\/, s\/n\n    \n    TEXT: \"Adecuaci\u00f3n de parte del semisotano del consultorio medico Juan Antonio Serrano, incorporando condiciones especiales de ejecuci\u00f3n de car\u00e1cter social relativas a inserci\u00f3n sociolaboral de personas en situaci\u00f3n de desempleo de larga duranci\u00f3n\"]\n    ACRONYMS: \/ \n    ----------------------------------------------------------------------------\n    ",
+    "signature_instructions": "\n    Given a text identify the acronyms contained in it. If none are present in the text, say '/'.\n    ----------------------------------------------------------------------------\n    Examples\n    --------\n    TEXT: \"El pib en España ha subido un 2% en el último trimestre. En la UE se ha registrado un aumento del 3%.\"]\n    ACRONYMS: pib, UE\n    \n    TEXT: \"Trabajos de sondeos del terreno y Estudio geotécnico en el CEIP JACARANDA, sito en la C/ Italo Cortella s/n , del Distrito Alcosa-Este Torreblanca(Sevilla)\"]\n    ACRONYMS: CEIP, C/, s/n\n    \n    TEXT: \"Adecuación de parte del semisotano del consultorio medico Juan Antonio Serrano, incorporando condiciones especiales de ejecución de carácter social relativas a inserción sociolaboral de personas en situación de desempleo de larga duranción\"]\n    ACRONYMS: / \n    ----------------------------------------------------------------------------\n    ",
     "signature_prefix": "ACRONYMS:",
-    "extended_signature_instructions": "\n    Given a text identify the acronyms contained in it. If none are present in the text, say '\/'.\n    ----------------------------------------------------------------------------\n    Examples\n    --------\n    TEXT: \"El pib en Espa\u00f1a ha subido un 2% en el \u00faltimo trimestre. En la UE se ha registrado un aumento del 3%.\"]\n    ACRONYMS: pib, UE\n    \n    TEXT: \"Trabajos de sondeos del terreno y Estudio geot\u00e9cnico en el CEIP JACARANDA, sito en la C\/ Italo Cortella s\/n , del Distrito Alcosa-Este Torreblanca(Sevilla)\"]\n    ACRONYMS: CEIP, C\/, s\/n\n    \n    TEXT: \"Adecuaci\u00f3n de parte del semisotano del consultorio medico Juan Antonio Serrano, incorporando condiciones especiales de ejecuci\u00f3n de car\u00e1cter social relativas a inserci\u00f3n sociolaboral de personas en situaci\u00f3n de desempleo de larga duranci\u00f3n\"]\n    ACRONYMS: \/ \n    ----------------------------------------------------------------------------\n    ",
+    "extended_signature_instructions": "\n    Given a text identify the acronyms contained in it. If none are present in the text, say '/'.\n    ----------------------------------------------------------------------------\n    Examples\n    --------\n    TEXT: \"El pib en España ha subido un 2% en el último trimestre. En la UE se ha registrado un aumento del 3%.\"]\n    ACRONYMS: pib, UE\n    \n    TEXT: \"Trabajos de sondeos del terreno y Estudio geotécnico en el CEIP JACARANDA, sito en la C/ Italo Cortella s/n , del Distrito Alcosa-Este Torreblanca(Sevilla)\"]\n    ACRONYMS: CEIP, C/, s/n\n    \n    TEXT: \"Adecuación de parte del semisotano del consultorio medico Juan Antonio Serrano, incorporando condiciones especiales de ejecución de carácter social relativas a inserción sociolaboral de personas en situación de desempleo de larga duranción\"]\n    ACRONYMS: / \n    ----------------------------------------------------------------------------\n    ",
     "extended_signature_prefix": "ACRONYMS:"
   }
 }

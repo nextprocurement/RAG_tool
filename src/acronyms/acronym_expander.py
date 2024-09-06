@@ -4,6 +4,8 @@ import copy
 import pathlib
 import logging
 import unidecode
+import ujson
+import re
 from sklearn.model_selection import train_test_split
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -43,7 +45,6 @@ class AcronymExpanderModule(dspy.Module):
     def __init__(self):
         super().__init__()
         self.expander = dspy.Predict(AcronymExpander)
-        #self.language_detector = language_detector
         self.no_expansion_variations = [
             '/', '/ (no se expande)', '', '${TEXTO}', '${ACRONIMOS}', '/ (no hay expansión)',
             '(no es acronimo)', 'no se puede expandir', '${EXPANSION}', '${ACRONYMS}', '${ACRONYM}',
@@ -51,6 +52,15 @@ class AcronymExpanderModule(dspy.Module):
             '/ (not present in the document)', "'/'", 'N/A', '/.', 'N_A', 'NA'
         ]
         
+    def dump_state(self, save_verbose=False, ensure_ascii=False, escape_forward_slashes=False):
+        print(self.named_parameters())
+        return {name: param.dump_state() for name, param in self.named_parameters()}
+    
+    def save(self, path, save_field_meta=False):
+        print("*"*50)
+        with open(path, "w") as f:
+            f.write(ujson.dumps(self.dump_state(save_field_meta), indent=2, ensure_ascii=False, escape_forward_slashes=False))
+            
     def _process_output(self, expansion):
         if expansion in self.no_expansion_variations:
             return "/"
@@ -89,7 +99,6 @@ class AcronymExpanderModule(dspy.Module):
         print("LISTA:",acronimos_list)
         
         expansions = []
-
         for acronimo in acronimos_list:
             response = self.expander(TEXT=texto, ACRONYMS=acronimo, LANGUAGE=idioma)
             expansion_generada = response.EXPANSION
@@ -104,10 +113,15 @@ class AcronymExpanderModule(dspy.Module):
             print("La expansión normalizada es:", normalized_expansion)
             normalized_acronym = self.normalize_text(acronimo)
             print("El acrónimo normalizado es:", normalized_acronym)
-
+            
             # Verificar si la expansión generada es demasiado larga
             if len(normalized_expansion) > 120:
                 print("EXPANSION GENERATED IS TOO LONG!!!")
+                expansions.append("/")
+                continue
+            
+            if len(re.findall(r'\d', normalized_expansion)) > 2:
+                print("TOO MANY NUMBERS IN THE EXPANSION")
                 expansions.append("/")
                 continue
 

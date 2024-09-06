@@ -76,39 +76,41 @@ def main():
     args = argparser.parse_args()
     
     if args.model_type == 'all':
+        print( "-- -- Training all models...")
         models = ['MalletLda', 'Ctm', 'BERTopic', 'TopicGPT']
     else:
         models = [args.model_type]
-        for model_type in models:
+        
+    for model_type in models:
+        
+        model_path = pathlib.Path(args.model_path) / f"{model_type}_{args.num_topics}"
+        print(f"-- -- Training model of type {model_type} at {model_path}...")
+        
+        list_skip = ['model_type','further_proc']
+        if model_type == 'BERTopic':
+            list_skip += ['num_iters']
+        
+        if model_type in ['MalletLda', 'Ctm', 'BERTopic']:
+            list_skip += ['do_second_level', 'sample']
+        
+        if model_type == 'TopicGPT':
+            path_env = pathlib.Path(".env")
+            load_dotenv(path_env)
+            api_key = os.getenv("OPENAI_API_KEY")
+            os.environ["OPENAI_API_KEY"] = api_key
             
-            model_path = pathlib.Path(args.model_path) / f"{model_type}_{args.num_topics}"
-            print(f"-- -- Training model of type {model_type} at {model_path}...")
+            list_skip += ['num_iters']
             
-            list_skip = ['model_type','further_proc']
-            if model_type == 'BERTopic':
-                list_skip += ['num_iters']
-            
-            if model_type in ['MalletLda', 'Ctm', 'BERTopic']:
-                list_skip += ['do_second_level', 'sample']
-            
-            if model_type == 'TopicGPT':
-                path_env = pathlib.Path(".env")
-                load_dotenv(path_env)
-                api_key = os.getenv("OPENAI_API_KEY")
-                os.environ["OPENAI_API_KEY"] = api_key
-                
-                list_skip += ['num_iters']
-                
-            params = {k: v for k, v in vars(args).items() if v is not None and k not in list_skip}
-            params["model_path"] = model_path
-            if model_type == 'TopicGPT':
-                params["api_key"] = api_key
+        params = {k: v for k, v in vars(args).items() if v is not None and k not in list_skip}
+        params["model_path"] = model_path
+        if model_type == 'TopicGPT':
+            params["api_key"] = api_key
 
-            # Create a model instance of type args.model_type
-            model = create_model(model_type, **params)
+        # Create a model instance of type args.model_type
+        model = create_model(model_type, **params)
 
-            # Train the model
-            model.train(args.further_proc)
+        # Train the model
+        model.train(args.further_proc)
         
 
 

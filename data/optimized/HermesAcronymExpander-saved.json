@@ -6,94 +6,94 @@
     "demos": [
       {
         "augmented": true,
-        "TEXT": "Adquisici\u00f3n de dos licencias Oracle DB \"Enterprise Edition\" para el Servicio P\u00fablico de Empleo de Castilla y Le\u00f3n\"",
+        "TEXT": "Adquisición de dos licencias Oracle DB \"Enterprise Edition\" para el Servicio Público de Empleo de Castilla y León\"",
         "ACRONYMS": "DB",
         "LANGUAGE": "SPANISH",
-        "EXPANSION": "Base de datos"
+        "EXPANSION": "Database"
       },
       {
         "augmented": true,
-        "TEXT": "Programa de Prevenci\u00f3n de Riesgos derivados del uso inadecuado de las Tecnolog\u00edas de la Informaci\u00f3n y Comunicaci\u00f3n (TIC) Innov@amos dirigido a alumnos de Educaci\u00f3n Primaria y familias de la Comunidad de Madrid",
+        "TEXT": "Programa de Prevención de Riesgos derivados del uso inadecuado de las Tecnologías de la Información y Comunicación (TIC) Innov@amos dirigido a alumnos de Educación Primaria y familias de la Comunidad de Madrid",
         "ACRONYMS": "TIC",
         "LANGUAGE": "SPANISH",
-        "EXPANSION": "Tecnolog\u00edas de la Informaci\u00f3n y Comunicaci\u00f3n"
+        "EXPANSION": "Tecnologías de la Información y Comunicación"
       },
       {
         "augmented": true,
-        "TEXT": "PRESTACI\u00d3N DEL SERVICIO DE: MANTENIMIENTO DE LAS APLICACIONES INFORM\u00c1TICAS DE SISTEMAS DE INFORMACI\u00d3N GEOGR\u00c1FICA (SIG) Y CAD DE LA DIPUTACI\u00d3N FORAL DE \u00c1LAVA PARA EL A\u00d1O 2018.",
+        "TEXT": "PRESTACIÓN DEL SERVICIO DE: MANTENIMIENTO DE LAS APLICACIONES INFORMÁTICAS DE SISTEMAS DE INFORMACIÓN GEOGRÁFICA (SIG) Y CAD DE LA DIPUTACIÓN FORAL DE ÁLAVA PARA EL AÑO 2018.",
         "ACRONYMS": "SIG",
         "LANGUAGE": "SPANISH",
-        "EXPANSION": "Sistema de Informaci\u00f3n Geogr\u00e1fica"
+        "EXPANSION": "Sistema de Información Geográfica"
       },
       {
         "augmented": true,
-        "TEXT": "PRESTACI\u00d3N DEL SERVICIO DE: MANTENIMIENTO DE LAS APLICACIONES INFORM\u00c1TICAS DE SISTEMAS DE INFORMACI\u00d3N GEOGR\u00c1FICA (SIG) Y CAD DE LA DIPUTACI\u00d3N FORAL DE \u00c1LAVA PARA EL A\u00d1O 2018.",
+        "TEXT": "PRESTACIÓN DEL SERVICIO DE: MANTENIMIENTO DE LAS APLICACIONES INFORMÁTICAS DE SISTEMAS DE INFORMACIÓN GEOGRÁFICA (SIG) Y CAD DE LA DIPUTACIÓN FORAL DE ÁLAVA PARA EL AÑO 2018.",
         "ACRONYMS": "CAD",
         "LANGUAGE": "SPANISH",
-        "EXPANSION": "Cartograf\u00eda Autom\u00e1tica Digital"
+        "EXPANSION": "Cartografía Automática Digital"
       },
       {
-        "texto": "Aceras en la avenida de la Constituci\u00f3n entre la calle n\u00fam. 19 y la calle Ra\u00f1\u00f3 (PO 2017) (Expediente de contrataci\u00f3n 17-2017)",
-        "acronimo": "n\u00fam.",
-        "expansion": "n\u00famero"
+        "texto": "Aceras en la avenida de la Constitución entre la calle núm. 19 y la calle Rañó (PO 2017) (Expediente de contratación 17-2017)",
+        "acronimo": "núm.",
+        "expansion": "número"
       },
       {
-        "texto": "Contrato de servicios de coordinaci\u00f3n del conjunto de las actuaciones aprobada en el Proyecto denominado Red de Recorridos Tur\u00edsticos Preferentes en Enclaves Patrimonio de la Humanidad del Atl\u00e1ntico de la Macaronesia (RECORED)",
+        "texto": "Contrato de servicios de coordinación del conjunto de las actuaciones aprobada en el Proyecto denominado Red de Recorridos Turísticos Preferentes en Enclaves Patrimonio de la Humanidad del Atlántico de la Macaronesia (RECORED)",
         "acronimo": "RECORED",
-        "expansion": "Red de Recorridos Tur\u00edsticos Preferentes en Enclaves Patrimonio de la Humanidad del Atl\u00e1ntico de la Macaronesia"
+        "expansion": "Red de Recorridos Turísticos Preferentes en Enclaves Patrimonio de la Humanidad del Atlántico de la Macaronesia"
       },
       {
-        "texto": "Suministro de medicamentos de distribuci\u00f3n exclusiva de la firma \"TEVA PHARMA S.LU.\" con destino al Servicio de Farmacia del Hospital Universitario \"12 de Octubre\"",
+        "texto": "Suministro de medicamentos de distribución exclusiva de la firma \"TEVA PHARMA S.LU.\" con destino al Servicio de Farmacia del Hospital Universitario \"12 de Octubre\"",
         "acronimo": "S.LU.",
-        "expansion": "Sociedad de\u00a0Responsabilidad Limitada\u00a0Unipersonal"
+        "expansion": "Sociedad de Responsabilidad Limitada Unipersonal"
       },
       {
-        "texto": "Adquisici\u00f3n de 31.000 determinaciones para el diagn\u00f3stico post mortem, mediante la t\u00e9cnica ELISA de encefalopat\u00edas espongiformes transmisibles (EETS) en los animales de las especies bovina, ovina y caprina",
+        "texto": "Adquisición de 31.000 determinaciones para el diagnóstico post mortem, mediante la técnica ELISA de encefalopatías espongiformes transmisibles (EETS) en los animales de las especies bovina, ovina y caprina",
         "acronimo": "ELISA, EETS",
-        "expansion": "enzimoinmunoan\u00e1lisis de adsorci\u00f3n,  encefalopat\u00edas espongiformes transmisibles"
+        "expansion": "enzimoinmunoanálisis de adsorción,  encefalopatías espongiformes transmisibles"
       },
       {
-        "texto": "OBRA COMPLEMENTARIA para la Construcci\u00f3n de un CEIP en Arroyo de la Encomienda (Valladolid)",
+        "texto": "OBRA COMPLEMENTARIA para la Construcción de un CEIP en Arroyo de la Encomienda (Valladolid)",
         "acronimo": "CEIP",
-        "expansion": "colegio de educaci\u00f3n infantil primaria"
+        "expansion": "colegio de educación infantil primaria"
       },
       {
-        "texto": "Contrato basado 114 2017 6902. SE25 CC El Pozo: rehabilitaci\u00f3n de fachada, intervenciones en teatro, sustituci\u00f3n de aparatos de climatizaci\u00f3n y traslado de rack",
+        "texto": "Contrato basado 114 2017 6902. SE25 CC El Pozo: rehabilitación de fachada, intervenciones en teatro, sustitución de aparatos de climatización y traslado de rack",
         "acronimo": "CC",
         "expansion": "centro comercial"
       },
       {
-        "texto": "2017\/CSUA1\/000015 - Implementar una serie de mejoras en el sistema de cableado estructurado (SCE) en varios edificios de la Universidad de Santiago  de Compostela (USC)",
+        "texto": "2017/CSUA1/000015 - Implementar una serie de mejoras en el sistema de cableado estructurado (SCE) en varios edificios de la Universidad de Santiago  de Compostela (USC)",
         "acronimo": "SCE,USC",
         "expansion": "Sistema de cableado estructurado, Universidad de Santiago de Compostela"
       },
       {
-        "texto": "Servicio de Celadur\u00eda y Labores Complementarias, en las instalaciones administrativas de la calle Prado Tuerto n\u00ba 17, de Zamora.",
-        "acronimo": "n\u00ba",
-        "expansion": "n\u00famero"
+        "texto": "Servicio de Celaduría y Labores Complementarias, en las instalaciones administrativas de la calle Prado Tuerto nº 17, de Zamora.",
+        "acronimo": "nº",
+        "expansion": "número"
       },
       {
-        "texto": "Contratos derivados del \"Acuerdo Marco para la homologaci\u00f3n del suministro de energ\u00eda el\u00e9ctrica y gas natural con destino al Sector P\u00fablico de la Comunidad Aut\u00f3noma de La Rioja\", sublotes 1.1, 1.2 y 2.1 para edicios Consejer\u00eda APH",
+        "texto": "Contratos derivados del \"Acuerdo Marco para la homologación del suministro de energía eléctrica y gas natural con destino al Sector Público de la Comunidad Autónoma de La Rioja\", sublotes 1.1, 1.2 y 2.1 para edicios Consejería APH",
         "acronimo": "APH",
-        "expansion": "Atenci\u00f3n prehospitalaria"
+        "expansion": "Atención prehospitalaria"
       },
       {
-        "texto": "Contrato basado 114 2017 5398. SE23 C.C. Talleres de creatividad, eficiencia energ\u00e9tica: cambio de luminarias",
+        "texto": "Contrato basado 114 2017 5398. SE23 C.C. Talleres de creatividad, eficiencia energética: cambio de luminarias",
         "acronimo": "C.C.",
-        "expansion": "centro comercial"
+        "expansion": "/"
       },
       {
-        "texto": "Servicios de arquitecto para la remodelaci\u00f3n de instalaciones que con motivo del proyecto HOGEI URTE se realizar\u00e1n por parte de Euskalduna Jauregia Palacio Euskalduna, S.A ",
+        "texto": "Servicios de arquitecto para la remodelación de instalaciones que con motivo del proyecto HOGEI URTE se realizarán por parte de Euskalduna Jauregia Palacio Euskalduna, S.A ",
         "acronimo": "S.A",
-        "expansion": "sociedad an\u00f3nima"
+        "expansion": "sociedad anónima"
       },
       {
-        "texto": "Refuerzo de firme en la VP 4013 Melgar de Arriba a Villacarral\u00f3n. Tramo: Santerv\u00e1s a Villacarral\u00f3n",
+        "texto": "Refuerzo de firme en la VP 4013 Melgar de Arriba a Villacarralón. Tramo: Santervás a Villacarralón",
         "acronimo": "VP",
-        "expansion": "v\u00eda p\u00fablica"
+        "expansion": "vía pública"
       }
     ],
-    "signature_instructions": "\n    Expand the acronyms based on the text.\n    ----------------------------------------------------------------------------\n    Examples\n    --------\n    TEXT: \"El pib en Espa\u00f1a ha subido un 2% en el \u00faltimo trimestre. En la UE se ha registrado un aumento del 3%.\"]\n    ACRONYMS: 'pib', 'UE'\n    LANGUAGE: SPANISH\n    EXPANSION: 'Producto Interior Bruto', 'Uni\u00f3n Europea'\n    \n    TEXT: \"Trabajos de sondeos del terreno y Estudio geot\u00e9cnico en el CEIP JACARANDA, sito en la C\/ Italo Cortella s\/n , del Distrito Alcosa-Este Torreblanca(Sevilla)\"]\n    ACRONYMS: 'CEIP', 'C\/', 's\/n'\n    LANGUAGE: SPANISH\n    EXPANSION: 'Centro de Educaci\u00f3n Infantil y Primaria', 'Calle', 'sin n\u00famero'\n    \n    TEXT: \"Adecuaci\u00f3n de parte del semisotano del consultorio medico Juan Antonio Serrano, incorporando condiciones especiales de ejecuci\u00f3n de car\u00e1cter social relativas a inserci\u00f3n sociolaboral de personas en situaci\u00f3n de desempleo de larga duranci\u00f3n\"]\n    ACRONYMS: '\/' \n    LANGUAGE: SPANISH\n    EXPANSION: '\/'\n    ----------------------------------------------------------------------------\n    ",
+    "signature_instructions": "\n    Expand the acronyms based on the text.\n    ----------------------------------------------------------------------------\n    Examples\n    --------\n    TEXT: \"El pib en España ha subido un 2% en el último trimestre. En la UE se ha registrado un aumento del 3%.\"]\n    ACRONYMS: 'pib', 'UE'\n    LANGUAGE: SPANISH\n    EXPANSION: 'Producto Interior Bruto', 'Unión Europea'\n    \n    TEXT: \"Trabajos de sondeos del terreno y Estudio geotécnico en el CEIP JACARANDA, sito en la C/ Italo Cortella s/n , del Distrito Alcosa-Este Torreblanca(Sevilla)\"]\n    ACRONYMS: 'CEIP', 'C/', 's/n'\n    LANGUAGE: SPANISH\n    EXPANSION: 'Centro de Educación Infantil y Primaria', 'Calle', 'sin número'\n    \n    TEXT: \"Adecuación de parte del semisotano del consultorio medico Juan Antonio Serrano, incorporando condiciones especiales de ejecución de carácter social relativas a inserción sociolaboral de personas en situación de desempleo de larga duranción\"]\n    ACRONYMS: '/' \n    LANGUAGE: SPANISH\n    EXPANSION: '/'\n    ----------------------------------------------------------------------------\n    ",
     "signature_prefix": "EXPANSION:"
   }
 }
