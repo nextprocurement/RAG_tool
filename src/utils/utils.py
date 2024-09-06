@@ -278,7 +278,7 @@ def filter_items_and_acronyms(items):
     filtered_items = [
         item for item in items
         if len(item) <= 14
-        and len(item.split()) = 1
+        and len(item.split()) == 1
         and sum(c.isdigit() for c in item) <= 3
         and len(item) > 1
         and not item.isdigit()
