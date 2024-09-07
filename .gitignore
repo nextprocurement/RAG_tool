@@ -201,3 +201,4 @@ data/models
 data/all_extracted_12aug_es_11_objectives_embeddings.parquet
 data/preprocessed
 aux/cleaning_enrichment/test_equivalences.ipynb
+data/out

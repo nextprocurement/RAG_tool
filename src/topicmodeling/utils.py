@@ -2,9 +2,6 @@ import json
 import pathlib
 import pickle
 import pandas as pd
-from src.topicmodeling.topic_model import (BERTopicModel, CtmModel,
-                                           MalletLdaModel, TopicGPTModel)
-
 
 def unpickler(file: str):
     """Unpickle file"""
@@ -136,24 +133,3 @@ def tkz_clean_str(
             el for el in cleantext if el not in stopwords]
 
     return ' '.join(cleantext)
-
-def create_model(model_name, **kwargs):
-    # Map model names to corresponding classes
-    model_mapping = {
-        'MalletLda': MalletLdaModel,
-        'Ctm': CtmModel,
-        'BERTopic': BERTopicModel,
-        'TopicGPT': TopicGPTModel
-    }
-
-    # Retrieve the class based on the model name
-    model_class = model_mapping.get(model_name)
-
-    # Check if the model name is valid
-    if model_class is None:
-        raise ValueError(f"Invalid model name: {model_name}")
-
-    # Create an instance of the model class
-    model_instance = model_class(**kwargs)
-
-    return model_instance

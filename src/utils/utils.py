@@ -207,6 +207,21 @@ def process_dataframe(
     # Return only the relevant columns based on the action
     if action == "detect":
         return df[[column_name, 'Acronyms Detected(LLM)']]
+    elif action == "complete":
+        def substitute_acronyms(row):
+            if row['Expansions'] != "/":
+                text = row['texto_sin_preprocesar'].lower()
+                acronyms = row['Acronyms Detected(LLM)'].split(', ') 
+                expansions = row['Expansions'].split(', ')
+                
+                for acronym, expansion in zip(acronyms, expansions):
+                    text = text.replace(acronym, expansion)
+                return text
+            else:
+                return row['texto_sin_preprocesar'].lower()
+
+        df['text_substituted'] = df.apply(substitute_acronyms, axis=1)
+        return df
     else:
         # Ensure that acronyms have been detected before expanding
         if 'Acronyms Detected(LLM)' not in df.columns or df['Acronyms Detected(LLM)'].isnull().all():

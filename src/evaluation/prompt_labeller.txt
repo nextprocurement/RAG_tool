@@ -1,0 +1,13 @@
+Given a set of keywords representing a topic assign a label to the topic. You must always assign a label to the topic that CANNOT be LABEL. The label should be in the same language the keywords are.
+
+Your response should alwys be just the LABEL.
+
+[Examples]
+Topic: ['school', 'student', 'high', 'survey', 'day', 'youth', 'world_health', 'organization', 'grade', 'prevalence', 'behavior', 'education', 'adolescent', 'risk', 'report', 'white', 'teacher', 'table', 'state', 'female_student']
+
+Your response: Adolescent Behavior and Education Analysis
+
+[Topic]
+{}
+
+[Your response]

@@ -20,6 +20,8 @@ from dspy.datasets import Dataset
 from src.topicmodeling.topic_model import BERTopicModel, CtmModel, MalletLdaModel, TopicGPTModel
 from dspy.evaluate import Evaluate
 
+from src.utils.tm_utils import create_model
+
 
 #######################################################################
 # TenderDataset
@@ -306,41 +308,6 @@ class HermesEquivalencesGenerator(object):
                 self._logger.error("-- -- Data path is required for training. Exiting.")
                 return
             self._train_module(data_path, trained_promt)
-            
-    def _create_model(
-        self,
-        model_name: str,
-        **kwargs: Dict[str, Any]
-    ) -> Any:
-        """
-        Instantiate a topic model based on the model name and keyword arguments.
-        
-        Parameters
-        ----------
-        model_name : str
-            Name of the model to instantiate.
-        **kwargs : Dict[str, Any]
-            Keyword arguments to pass to the model constructor, specific to each model.
-        """
-        
-        model_mapping = {
-            'MalletLda': MalletLdaModel,
-            'Ctm': CtmModel,
-            'BERTopic': BERTopicModel,
-            'TopicGPT': TopicGPTModel
-        }
-
-        # Retrieve the class based on the model name
-        model_class = model_mapping.get(model_name)
-
-        # Check if the model name is valid
-        if model_class is None:
-            raise ValueError(f"Invalid model name: {model_name}")
-
-        # Create an instance of the model class
-        model_instance = model_class(**kwargs)
-
-        return model_instance
     
     def _get_clusters(
         self,
@@ -628,7 +595,7 @@ class HermesEquivalencesGenerator(object):
             params_inference['model_path'] = path_to_source
             params_inference['mallet_path'] = "/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/src/topicmodeling/Mallet-202108/bin/mallet"
 
-            model = self._create_model(model_type, **params_inference)
+            model = create_model(model_type, **params_inference)
             topics = model.print_topics()
 
             #for i, topic in enumerate(topics):

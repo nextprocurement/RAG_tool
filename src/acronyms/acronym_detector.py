@@ -1,18 +1,14 @@
+import os
+from dotenv import load_dotenv
 import dspy
 import logging
-import json
 import ujson
 import pandas as pd
 import pathlib
 from time import sleep
 from sklearn.model_selection import train_test_split
-from dspy.primitives.assertions import DSPySuggestionError
-from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
 from dspy.teleprompt import BootstrapFewShotWithRandomSearch
 
-# @ TODO: Si usamos dspy para esto, lo suyo sería optimizar todos los componentes, esto es, hacer un teleprompter para cada módulo (AcronymDetector, AcronymExpander, etc.). Entonces, no habría que meter un ejemplo en la definición del módulo, ya que en teoría, el teleprompter ya se encarga de eso.
-# @ TODO: Me genera duda lo siguiente: Ahora mismo las descripciones en la signature están en español. Está bien, dado que ahora mismo el dataset con el que trabajamos está en español. Pero el problema de esto es que no es escalable. Si en un futuro queremos trabajar con un dataset en inglés, tendríamos que cambiar todas las descripciones de las signatures. ¿No sería mejor poner las descripciones en inglés desde el principio? Así, si en un futuro queremos trabajar con un dataset en inglés, no tendríamos que cambiar nada. ¿Qué opinas? Eso sí, el fine-tuning va a ser un poco más complicado.
 class AcronymDetector(dspy.Signature):
     """
     Given a text identify the acronyms contained in it. If none are present in the text, say '/'.
@@ -103,6 +99,9 @@ class HermesAcronymDetector:
     
     def __init__(
         self,
+        model_type: str = "llama",
+        open_ai_model: str = "gpt-3.5-turbo",
+        path_open_api_key="/export/usuarios_ml4ds/lbartolome/NextProcurement/NP-Search-Tool/.env",
         do_train: bool = False,
         data_path: str = None,
         trained_promt: str = pathlib.Path(
@@ -117,6 +116,12 @@ class HermesAcronymDetector:
         
         Parameters
         ----------
+        model_type : str, optional
+            Type of model to use, by default "llama"
+        open_ai_model : str, optional
+            OpenAI model to use, by default "gpt-3.5-turbo"
+        path_open_api_key : str, optional
+            Path to OpenAI API key.
         do_train : bool, optional
             Whether to train the module, by default False
         data_path : str, optional
@@ -130,7 +135,18 @@ class HermesAcronymDetector:
         path_logs : pathlib.Path, optional
             Path to logs directory, by default pathlib.Path(__file__).parent.parent / "data/logs"
         """
-        self._logger = logger if logger else self._init_logger(__name__, path_logs)
+        self._logger = logger if logger else logging.getLogger(__name__)
+        
+        # Dspy settings
+        if model_type == "llama":
+            self.lm = dspy.HFClientTGI(model="meta-llama/Meta-Llama-3-8B ",
+                                       port=8090, url="http://127.0.0.1")
+        elif model_type == "openai":
+            load_dotenv(path_open_api_key)
+            api_key = os.getenv("OPENAI_API_KEY")
+            os.environ["OPENAI_API_KEY"] = api_key
+            self.lm = dspy.OpenAI(model=open_ai_model)
+        dspy.settings.configure(lm=self.lm, temperature=0)
         
         if not do_train:
             if not pathlib.Path(trained_promt).exists():
@@ -139,13 +155,11 @@ class HermesAcronymDetector:
             self.module = AcronymDetectorModule()
             self.module.load(trained_promt)
             self._logger.info(f"AcronymDetectorModule loaded from {trained_promt}")
-            print("EL trained prompt sin entrenamiento es:", trained_promt)
         else:
             if not data_path:
                 self._logger.error("Data path is required for training. Exiting.")
                 return
             self._train_module(data_path, trained_promt)
-            print("EL trained prompt CON entrenamiento es:", trained_promt)
 
 
     def _train_module(self, data_path, trained_promt):

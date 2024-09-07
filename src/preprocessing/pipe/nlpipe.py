@@ -54,7 +54,7 @@ def main():
     parser.add_argument("--nw", type=int, default=0,
                         required=False, help="Number of workers to use with Dask")
     parser.add_argument("--path_add_acr", type=str, default=None,
-                        required=True, help="Path to addidional acronyms file")
+                        required=False, help="Path to addidional acronyms file")
 
     args = parser.parse_args()
 

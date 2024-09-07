@@ -1,27 +1,27 @@
 import spacy
 from src.acronyms.acronym_expander import LanguageDetectorModule
-#from acronym_expander import LanguageDetectorModule
-import logging
+from spacy_download import load_spacy
+
 
 class NERTextAnalyzer:
     def __init__(self):
-        self.nlp = spacy.load("es_core_news_md")  
+        self.nlp = load_spacy("es_core_news_md")  
 
     def load_model(self, language):
         """
         Load the appropriate spaCy model based on detected language and print the action.
         """
         if language == "SPANISH":
-            self.nlp = spacy.load("es_core_news_md")
+            self.nlp = load_spacy("es_core_news_md")
             print("Model 'es_core_news_md' loaded for Spanish language.")
         elif language == "ENGLISH":
-            self.nlp = spacy.load("en_core_web_md")
+            self.nlp = load_spacy("en_core_web_md")
             print("Model 'en_core_web_md' loaded for English language.")
         elif language == "CATALAN":
-            self.nlp = spacy.load("ca_core_news_md")
+            self.nlp = load_spacy("ca_core_news_md")
             print("Model 'ca_core_news_md' loaded for Catalan language.")
         else:
-            self.nlp = spacy.load("es_core_news_md")
+            self.nlp = load_spacy("es_core_news_md")
             print(f"Language detected: {language}. Unsupported language, loading Spanish model by default.")
 
     def analyze_text(self, text, detected_acronyms):

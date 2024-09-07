@@ -1,18 +1,34 @@
 logger:
-  dir_logger: /export/usuarios_ml4ds/cggamella/RAG_tool/logs/app.log  # Directory for logs
+  dir_logger: data/logs/app.log  # Directory for logs
   console_log: true
   file_log: true
   log_level: INFO  # CRITICAL FATAL ERROR WARN WARNING INFO DEBUG NOTSET
   logger_name: app-log
 
 # Model Configuration
-model_type: "hf"  # "hf" for Hugging Face(llama), "openai" for OpenAI
-model_name: "meta-llama/meta-llama-3-8b-instruct"  # O alternativa nombre del modelo que se usará (gpt-4o-2024-05-13)
-# DataFrame Configuration
-data_column_name: "texto_sin_preprocesar"  # Define the column name to read, can be 'text', 'title', 'texto_sin_preprocesar', etc...
+llm:
+  model_type: "hf"  # "hf" for Hugging Face(llama), "openai" for OpenAI
+  model_name: "meta-llama/meta-llama-3-8b-instruct"  # O alternativa nombre del modelo que se usará (gpt-4o-2024-05-13)
+  env: "/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/.env"
 
-# Training Configuration
-train_all_modules: false  # If is true, all modules will be trained, if is false, only the modules in the list modules_to_train will be trained
-modules_to_train:  # List of modules to train
-  #- HermesAcronymExpander
-  #- HermesAcronymDetector
+# ACRONYM Configuration
+acr:
+  data_column_name: "texto_sin_preprocesar"  # Define the column name to read, can be 'text', 'title', 'texto_sin_preprocesar', etc...
+  train_all_modules: false  # If is true, all modules will be trained, if is false, only the modules in the list modules_to_train will be trained
+  modules_to_train:  # List of modules to train
+    #- HermesAcronymExpander
+    #- HermesAcronymDetector
+
+# Preprocessing Configuration
+preproc:
+  preprocessing_script: "/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/src/preprocessing/pipe/nlpipe.py"
+  source_type : "parquet"
+  spacy_model : "es_core_news_lg"
+  lang : "es"
+
+equiv:
+  num_topics : 100
+  further_proc: False
+  model_type: "MalletLda"
+  path_save : "src/topicmodeling/data/equivalences"
+  language : "spanish"

@@ -1,6 +1,7 @@
+import os
+from dotenv import load_dotenv
 import pandas as pd
 import dspy
-import copy
 import pathlib
 import logging
 import unidecode
@@ -10,7 +11,6 @@ from sklearn.model_selection import train_test_split
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 from dspy.teleprompt import BootstrapFewShotWithRandomSearch
-from dspy.primitives.assertions import DSPySuggestionError
 from lingua import Language, LanguageDetectorBuilder
 
 
@@ -159,6 +159,9 @@ class HermesAcronymExpander(object):
 
     def __init__(
         self,
+        model_type: str = "llama",
+        open_ai_model: str = "gpt-3.5-turbo",
+        path_open_api_key="/export/usuarios_ml4ds/lbartolome/NextProcurement/NP-Search-Tool/.env",
         do_train: bool = False,
         data_path: str = None,
         trained_promt: str = pathlib.Path(
@@ -173,6 +176,12 @@ class HermesAcronymExpander(object):
 
         Parameters
         ----------
+        model_type : str, optional
+            Type of model to use, by default "llama"
+        open_ai_model : str, optional
+            OpenAI model to use, by default "gpt-3.5-turbo"
+        path_open_api_key : str, optional
+            Path to OpenAI API key.
         do_train : bool, optional
             Whether to train the module, by default False
         data_path : str, optional
@@ -186,8 +195,19 @@ class HermesAcronymExpander(object):
         path_logs : pathlib.Path, optional
             Path to logs directory, by default pathlib.Path(__file__).parent.parent / "data/logs"
         """
-        self._logger = logger if logger else init_logger(__name__, path_logs)
+        self._logger = logger if logger else logging.getLogger(__name__)
         self.language_detector = LanguageDetectorModule()
+        
+        # Dspy settings
+        if model_type == "llama":
+            self.lm = dspy.HFClientTGI(model="meta-llama/Meta-Llama-3-8B ",
+                                       port=8090, url="http://127.0.0.1")
+        elif model_type == "openai":
+            load_dotenv(path_open_api_key)
+            api_key = os.getenv("OPENAI_API_KEY")
+            os.environ["OPENAI_API_KEY"] = api_key
+            self.lm = dspy.OpenAI(model=open_ai_model)
+        dspy.settings.configure(lm=self.lm, temperature=0)
         
         if not do_train:
             if not pathlib.Path(trained_promt).exists():

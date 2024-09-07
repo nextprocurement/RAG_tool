@@ -4,8 +4,6 @@ import pathlib
 
 from dotenv import load_dotenv
 
-from src.topicmodeling.utils import create_model
-
 def main():
     argparser = argparse.ArgumentParser()
     argparser.add_argument(
@@ -23,12 +21,12 @@ def main():
     argparser.add_argument(
         "--load_data_path",
         help="Path to the preprocessed data.",
-        type=str, default='/export/data_ml4ds/NextProcurement/PLACE/pliegos_objectives_preprocessed/all_extracted_12aug_es/all_extracted_12aug_es_11_objectives_embeddings.parquet',
+        type=str, default='/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/preprocessed/optimized/cpv_45_preproc_embeddings.parquet',
         required=False)
     argparser.add_argument(
         "--model_path",
         help="Path to save the trained models",
-        type=str, default='data/models', required=False)
+        type=str, default='data/models/optimized/cpv45', required=False)
     argparser.add_argument(
         "--sample",
         help="how many documents to run",
@@ -55,6 +53,7 @@ def main():
         print( "-- -- Training all models...")
         models = ['MalletLda', 'Ctm', 'BERTopic', 'TopicGPT']
     else:
+        print( f"-- -- Training model of type {args.model_type}...")
         models = [args.model_type]
         
     for model_type in models:
