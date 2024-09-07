@@ -13,8 +13,8 @@ if __name__ == '__main__':
     # Parse arguments
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", type=str, required=False, help="Path to the input file", default="/export/usuarios_ml4ds/cggamella/NP-Search-Tool/sample_data/models/Mallet/es_Mallet_df_merged_20_topics_45_ENTREGABLE/datos_modelo.parquet")
-    parser.add_argument("--output", type=str, required=False, help="Path to the output file", default="/export/usuarios_ml4ds/cggamella/RAG_tool/data/preprocessed/cpv_45_preproc.parquet")
-    parser.add_argument("--path_add_acr",  type=str, required=False, help="Path to the acr file", default="/export/usuarios_ml4ds/cggamella/RAG_tool/topicmodelling/data/acronyms/df_esp_first100_both_equivalences.json")
+    parser.add_argument("--output", type=str, required=False, help="Path to the output file", default="/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/preprocessed/optimized/cpv_45_preproc.parquet")
+    parser.add_argument("--path_add_acr",  type=str, required=False, help="Path to the acr file", default="/export/usuarios_ml4ds/cggamella/RAG_tool/src/topicmodeling/data/acronyms/df_esp_first100_both_equivalences.json")
     args = parser.parse_args()
         
 

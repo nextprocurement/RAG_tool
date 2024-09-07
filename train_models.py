@@ -4,31 +4,7 @@ import pathlib
 
 from dotenv import load_dotenv
 
-from src.topicmodeling.topic_model import (BERTopicModel, CtmModel,
-                                            MalletLdaModel, TopicGPTModel)
-
-
-def create_model(model_name, **kwargs):
-    # Map model names to corresponding classes
-    model_mapping = {
-        'MalletLda': MalletLdaModel,
-        'Ctm': CtmModel,
-        'BERTopic': BERTopicModel,
-        'TopicGPT': TopicGPTModel
-    }
-
-    # Retrieve the class based on the model name
-    model_class = model_mapping.get(model_name)
-
-    # Check if the model name is valid
-    if model_class is None:
-        raise ValueError(f"Invalid model name: {model_name}")
-
-    # Create an instance of the model class
-    model_instance = model_class(**kwargs)
-
-    return model_instance
-
+from src.topicmodeling.utils import create_model
 
 def main():
     argparser = argparse.ArgumentParser()
