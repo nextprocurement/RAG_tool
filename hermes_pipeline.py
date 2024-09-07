@@ -132,7 +132,7 @@ def main():
     args = parser.parse_args()
 
     if args.mode == "optimized":
-        logger.info(f"Running HERMES pipeline in optimized mode...")
+        logger.info(f"-- -- Running HERMES pipeline in optimized mode...")
         path_root_save = pathlib.Path(args.save_path) / 'optimized'
         if not path_root_save.exists():
             path_root_save.mkdir(parents=True)
@@ -259,23 +259,23 @@ def main():
         logger.info(f"### 3. Equivalence Detection ###")
         logger.info("#"*80)
         
-        load_data_path = path_save.stem + "_embeddings.parquet" # Path to the output file from the previous step
+        load_data_path = path_save.parent / (path_save.stem + "_embeddings.parquet") # Path to the output file from the previous step
         path_save = path_root_save / '3.equivalence_detection'
         if not path_save.exists():
             path_save.mkdir(parents=True)
             
         file_save = pathlib.Path(args.data_path).stem + '.json'
-        path_save_eqs = path_save_eqs  / file_save
-        
-        if path_save_eqs.exists():
-            logger.info(f"-- -- Equivalences output already exists at {path_save_eqs}")
+        file_save_copy = pathlib.Path(args.data_path).stem + '_copy.json'
+        path_save_eqs = pathlib.Path(config["equiv"].get("path_save")) 
+        path_save_copy = path_save / file_save_copy
+ 
+        if path_save_copy.exists():
+            logger.info(f"-- -- Equivalences output already exists at {path_save_copy}")
         else:
-            logger.info(f"-- -- Equivalences output does not exist at {path_save_eqs}")
+            logger.info(f"-- -- Equivalences output does not exist at {path_save_copy}")
             logger.info(f"-- -- Running Equivalence Detection...")
             time_start = time.time()    
-        
-            file_save_copy = pathlib.Path(args.data_path).stem + '_copy.json'
-            path_save_eqs = pathlib.Path(config["equiv"].get("path_save")) 
+            
             if not path_save_eqs.exists():
                 logger.info(f"-- -- Creating directory {path_save_eqs}")
                 path_save_eqs.mkdir(parents=True)
@@ -286,25 +286,31 @@ def main():
                 for file in path_save_eqs.iterdir():
                     if file.is_file():
                         file.unlink()
-            path_save_copy = path_save / file_save_copy    
-        
+            
+            path_save_eqs = path_save_eqs / file_save
+            
             eq_generator = HermesEquivalencesGenerator(
                 use_optimized = True,
                 do_train = True,
             )
         
             # Train auxiliary topic model
-            model_path = path_save / 'aux_topic_model'
+            model_path = path_save / pathlib.Path(args.data_path).stem /'aux_topic_model'
             if model_path.exists():
                 logger.info(f"-- -- Auxiliary topic model already exists at {model_path}")
             else:
+                model_path.mkdir(parents=True)
                 logger.info(f"-- -- Auxiliary topic model does not exist at {model_path}")
                 logger.info(f"-- -- Training auxiliary topic model...")
 
-                args = {k: v for k, v in vars(args).items() if v is not None and k not in ["do_second_level", "further_proc", "sample","model_type", "num_iters", "num_topics"]}
-                args['model_path'] = model_path.as_posix()
-                args['load_data_path'] = load_data_path
-                
+                this_args = argparse.Namespace(
+                    **{k: v for k, v in vars(args).items() 
+                    if v is not None and k in ["further_proc", "sample", "num_iters"]})
+
+                # Assign new values to the copied Namespace object
+                this_args.model_path = model_path.as_posix()
+                this_args.load_data_path = load_data_path.as_posix()
+                                
                 model = train_model(
                     model_path = model_path.as_posix(),
                     model_type = config['equiv']['model_type'],
@@ -312,30 +318,29 @@ def main():
                     further_proc = config['equiv']['further_proc'],
                     logger = logger,
                     env = pathlib.Path(config['llm']['env']),
-                    args = args
+                    args = this_args
                 )
                 topics = model.print_topics()
-                logger.info(f"-- -- Topics from auxiliary trained model: {topics}")
+                print(f"-- -- Topics from auxiliary trained model: {topics}")
                 for i, topic in enumerate(topics):
-                    logger("Topic #", i)
-                    logger(topics[topic])
+                    print("Topic #", i)
+                    print(topics[topic])
             
-            path_to_source = model_path / 'vocabulary.txt' if args.source_eq == "vocabulary" else model_path
+            path_to_source = model_path / f"{config['equiv']['model_type']}_{config['equiv']['num_topics']}" / "vocabulary.txt" if args.source_eq == "vocabulary" else model_path
     
             logger.info(f"-- -- Generating equivalences from {args.source_eq}...")
             eq_generator.generate_equivalences(
                 source = args.source_eq,
                 path_to_source = path_to_source,
                 path_save = path_save_eqs,
-                model_type = config['tm']['model_type'],
-                language = config['tm']['language'],
+                model_type = config['equiv']['model_type'],
+                language = config['equiv']['language'],
             )
         
             # Copy the generated file to output so it is not overwritten when multiple runs are executed
             logger.info(f"-- -- Equivalences saved to {path_save_eqs}")
-            shutil.copy(path_save, path_save_copy)
+            shutil.copy(path_save_eqs, path_save_copy)
         
-        import pdb; pdb.set_trace()
         #**********************************************************************
         # 4. Training
         #***********************************************************************
@@ -355,9 +360,13 @@ def main():
             model_path.mkdir(parents=True)
             logger.info(f"-- -- Model output does not exist at {model_path}. Training model...")
             
-            args = {k: v for k, v in vars(args).items() if v is not None and k not in ["do_second_level", "further_proc", "sample","model_type", "num_iters", "num_topics"]}
-            args['model_path'] = model_path.as_posix()
-            args['load_data_path'] = load_data_path
+            this_args = argparse.Namespace(
+                **{k: v for k, v in vars(args).items() 
+                if v is not None and k in ["further_proc", "sample", "num_iters"]})
+
+            # Assign new values to the copied Namespace object
+            this_args.model_path = model_path.as_posix()
+            this_args.load_data_path = load_data_path.as_posix()
             
             if args.model_type == 'all':
                 logger.info( "-- -- Training all models...")
@@ -374,22 +383,113 @@ def main():
                     further_proc = args.further_proc,
                     logger = logger,
                     env = pathlib.Path(config['llm']['env']),
-                    args = args
+                    args = this_args
                 )
                 topics = model.print_topics()
-                logger.info(f"-- -- Topics from auxiliary trained model: {topics}")
+                print(f"-- -- Topics from auxiliary trained model: {topics}")
                 for i, topic in enumerate(topics):
-                    logger("Topic #", i)
-                    logger(topics[topic])
+                    print("Topic #", i)
+                    print(topics[topic])
     
     else:
-        logger.info("Executing HERMES pipeline in non-optimized mode...")
+        logger.info("-- -- Running HERMES pipeline in non-optimized mode...")
         
         path_root_save = pathlib.Path(args.save_path) / 'non_optimized'
         if not path_root_save.exists():
             path_root_save.mkdir(parents=True)
+            
+        #***********************************************************************
+        # 1. Preprocessing
+        #***********************************************************************
+        logger.info("#"*80)
+        logger.info(f"### 2. Preprocessing ###")
+        logger.info("#"*80)
         
+        source_path = args.data_path
+        path_save = path_root_save / '2.preprocessing'
+        if not path_save.exists():
+            path_save.mkdir(parents=True)
+        file_save = pathlib.Path(args.data_path).stem + '.parquet'    
+        path_save = path_save / file_save
+        
+        if path_save.exists():
+            logger.info(f"-- -- Preprocessing output already exists at {path_save.as_posix()}")
+        else:
+            logger.info(f"-- -- Preprocessing output does not exist at {path_save.as_posix()}")
+            logger.info(f"-- -- Running Preprocessing...")
+            time_start = time.time()
+        
+            cmd = [
+                "python", (config['preproc'].get('preprocessing_script')),
+                "--source_path", source_path,
+                "--source_type", (config['preproc'].get('source_type')),
+                "--source", args.preproc_source + "_non_optimized",
+                "--destination_path", path_save.as_posix(),
+                "--lang", (config['preproc'].get('lang')),
+                "--spacy_model", (config['preproc'].get('spacy_model')),
+                "--do_embeddings"
+            ]
+            
+            try:
+                logger.info(f'-- -- Running preprocessing command {" ".join(cmd)}')
+                subprocess.check_output(cmd)
+            except subprocess.CalledProcessError as e:
+                logger.info('-- -- Preprocessing failed. Revise command')
+                logger.info(e.output)
+            
+            logger.info(f"-- -- Preprocessing done in {(time.time() - time_start)/60} minutes. Saving output...")
+            logger.info(f"-- -- 2. Preprocessing output saved to {path_save.as_posix()}")
     
+        #**********************************************************************
+        # 4. Training
+        #***********************************************************************
+        logger.info("#"*80)
+        logger.info(f"### 4. Training ###")
+        logger.info("#"*80)
+        
+        path_save = path_root_save / '4.training'
+        if not path_save.exists():
+            path_save.mkdir(parents=True)
+            
+        model_path = path_save / pathlib.Path(args.data_path).stem
+        
+        if model_path.exists():
+            logger.info(f"-- -- Model output already exists at {model_path}")
+        else:
+            model_path.mkdir(parents=True)
+            logger.info(f"-- -- Model output does not exist at {model_path}. Training model...")
+            
+            this_args = argparse.Namespace(
+                **{k: v for k, v in vars(args).items() 
+                if v is not None and k in ["sample", "num_iters"]})
+
+            # Assign new values to the copied Namespace object
+            this_args.model_path = model_path.as_posix()
+            this_args.load_data_path = load_data_path.as_posix()
+            this_args.further_proc = False
+            
+            if args.model_type == 'all':
+                logger.info( "-- -- Training all models...")
+                models = ['MalletLda', 'Ctm', 'BERTopic', 'TopicGPT']
+            else:
+                logger.info( f"-- -- Training model of type {args.model_type}...")
+                models = [args.model_type]
+            
+            for model_type in models:
+                model = train_model(
+                    model_path = model_path.as_posix(),
+                    model_type = model_type,
+                    num_topics = args.num_topics,
+                    further_proc = False,
+                    logger = logger,
+                    env = pathlib.Path(config['llm']['env']),
+                    args = this_args
+                )
+                topics = model.print_topics()
+                print(f"-- -- Topics from auxiliary trained model: {topics}")
+                for i, topic in enumerate(topics):
+                    print("Topic #", i)
+                    print(topics[topic])
 
 if __name__ == "__main__":
     main()
