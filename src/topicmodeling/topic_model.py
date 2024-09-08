@@ -433,6 +433,7 @@ class TopicModel(ABC):
         cohrs: Dict,
         topics: Dict,
         bow_mat: np.ndarray,
+        vocab: List[str],
         save_model: bool = True,
         second_topics: bool = False,
     ):
@@ -474,6 +475,7 @@ class TopicModel(ABC):
                 "topics": topics,
                 "second_topics": second_topics if second_topics else None,
                 "bow_mat": bow_mat,
+                "vocab": vocab,
                 **coherence_values
             }.items() if value is not None
         }
@@ -513,18 +515,15 @@ class TopicModel(ABC):
         self.loaded_data = unpickler(self.results_path)
 
         self.num_topics = self.loaded_data.get("num_topics")
-        self.document_probas = self.loaded_data.get("document_probas")
-        self.doc_topic_probas = self.loaded_data.get("doc_topic_probas")
-        self.word_topic_distribution = self.loaded_data.get(
-            "word_topic_distribution")
+        self.thetas = self.loaded_data.get("thetas")
+        self.betas = self.loaded_data.get("betas")
         self.topics = self.loaded_data.get("topics")
         self.second_topics = self.loaded_data.get("second_topics")
         self.train_data = self.loaded_data.get('train_data')
         self.coherence_cv = self.loaded_data.get('coherence_cv')
         self.coherence_uci = self.loaded_data.get('coherence_uci')
         self.coherence_npmi = self.loaded_data.get('coherence_npmi')
-        self.topic_reses = self.loaded_data.get('topic_reses')
-        self.topic_res_nums = self.loaded_data.get('topic_res_nums')
+        self.vocab = self.loaded_data.get('vocab')
 
         # self.bow_mat = self.loaded_data['bow_mat']
 
@@ -661,8 +660,12 @@ class MalletLdaModel(TopicModel):
         # Transform training data into the format expected by Mallet (txt file)
         self._logger.info(f"-- -- Creating Mallet corpus.txt...")
         corpus_txt_path = self.model_folder / "corpus.txt"
+        corpus_raw_path = self.model_folder / "corpus_raw.txt"
         with corpus_txt_path.open("w", encoding="utf8") as fout:
             for i, t in enumerate(self.df.lemmas):
+                fout.write(f"{i} 0 {t}\n")
+        with corpus_raw_path.open("w", encoding="utf8") as fout:
+            for i, t in enumerate(self.df.raw_text):
                 fout.write(f"{i} 0 {t}\n")
         self._logger.info(f"-- -- Mallet corpus.txt created.")
 
@@ -755,7 +758,7 @@ class MalletLdaModel(TopicModel):
 
         # Save the model data
         self.save_results(
-            thetas, betas, self.train_data, metrics, topics, bow_mat, save_model=False)
+            thetas, betas, self.train_data, metrics, topics, bow_mat, self.vocab, save_model=False)
 
         # Extract pipe for later inference
         self._extract_pipe()
@@ -1025,23 +1028,15 @@ class CtmModel(TopicModel):
         self._logger.info(
             f"-- -- Calculating topics and distributions..."
         )
-        wdt = self.get_word_topic_distribution()
-        document_probas, doc_topic_probas = self.group_docs_to_topics()
-        self._logger.info(
-            f"-- -- Document-topic probability matrix shape {np.array(doc_topic_probas).shape}")
-
-        topic_reses, topic_res_nums = [], []
-        for index in range(len(self.train_data)):
-            a, b = self.predict_doc_with_probs(index, topics)
-            topic_reses.append(a)
-            topic_res_nums.append(b)
+        wdt = self.get_betas()
+        thetas = self.get_thetas()
 
         # Calculate bow
         bow_mat = self.get_bow()
 
         # Save the model data
         self.save_results(
-            document_probas, doc_topic_probas, wdt, self.train_data, metrics, topics, topic_reses, topic_res_nums, bow_mat)
+            thetas, wdt, self.train_data, metrics, topics, bow_mat, self.vocab)
 
         return
 
@@ -1143,70 +1138,31 @@ class CtmModel(TopicModel):
             [print(f"Topic {k}: {v}") for k, v in self.topics.items()]
         return self.topics
 
-    def group_docs_to_topics(
+    def get_thetas(
         self,
-    ) -> Tuple[List[np.ndarray], Dict]:
+    ) -> np.ndarray:
         """
-        Calculate doc_prob_topic and topics_probs. If the model is not loaded, calculate the values and save them for later use. Otherwise, return the saved values.
+        Calculate document-topic distributions. If the model is not loaded, calculate the values and save them for later use. Otherwise, return the saved values.
 
         Returns
         -------
-        doc_prob_topic : List[np.ndarray]
-            List of numpy arrays of length D, where each numpy array has shape (T,) and T is the number of topics from the topic model. For each document, it contains a list of topic probabilities.
-        topics_probs : Dict
-            Dictionary with keys the ids of the topics. For each topic, it contains a list of tuples [(doc_id, probability)...]. Each tuple has a document id, representing the row id of the document, and probability the document belong to this topic. For each topic, it only contains a list of documents that are the most likely associated with that topic.
+        np.ndarray
+            A D x K matrix containing the topic distributions for all input documents with D being the documents and K the topics.
         """
 
         if not self.load_model:
 
             # Get document-topic distribution as D x T numpy array
-            thetas = self.model.get_doc_topic_distribution(
+            self.thetas = self.model.get_doc_topic_distribution(
                 self.training_dataset)  # DxT
 
-            doc_prob_topic = []
-            doc_to_topics, topics_probs = {}, {}
+        return self.thetas
 
-            self._logger.info(
-                f"-- -- Sorting topic and document probabilities...")
-
-            for doc_id, inferred in tqdm(enumerate(thetas)):
-                doc_topics = list(enumerate(inferred))
-                doc_prob_topic.append(inferred)
-
-                doc_topics.sort(key=lambda a: a[1], reverse=True)
-
-                doc_to_topics[doc_id] = doc_topics
-
-                if doc_topics[0][0] in topics_probs:
-                    topics_probs[doc_topics[0][0]].append(
-                        (doc_id, doc_topics[0][1]))
-                else:
-                    topics_probs[doc_topics[0][0]] = [
-                        (doc_id, doc_topics[0][1])]
-
-            # Sort the documents by topics based on their probability in descending order
-            for k, v in topics_probs.items():
-                topics_probs[k].sort(key=lambda a: a[1], reverse=True)
-
-            self.doc_to_topics = doc_to_topics
-            self.document_probas = topics_probs
-            self.doc_topic_probas = doc_prob_topic
-
-        return self.document_probas, self.doc_topic_probas
-
-    def get_word_topic_distribution(
+    def get_betas(
         self
-    ) -> Dict:
+    ) -> np.ndarray:
         """
         Calculate the word-topic distribution. If the model is not loaded, calculate the values and save them for later use. Otherwise, return the saved values.
-
-        Data structure
-            {
-            [word1]: [topic1, topic2, topic3...]
-            [word2]: [topic1, topic2, topic3...]
-            [word3]: [topic1, topic2, topic3...]
-            ...
-            }
 
         Returns
         -------
@@ -1215,10 +1171,9 @@ class CtmModel(TopicModel):
         """
 
         if not self.load_model:
-            twd = self.model.get_topic_word_distribution().T
-            self.word_topic_distribution = {
-                self.vocab[i]: ele for i, ele in enumerate(twd)}
-        return self.word_topic_distribution
+            self.betas = self.model.get_topic_word_distribution().T
+            
+        return self.betas
 
 
 class BERTopicModel(TopicModel):
@@ -1371,21 +1326,12 @@ class BERTopicModel(TopicModel):
 
         # Get vocabulary of the model
         self.vocab = self.model.vectorizer_model.get_feature_names_out()
-
-        # topic_distr = D x K matrix containing the topic distributions
-        # for all input documents.
-        thetas_approx, _ = self.model.approximate_distribution(texts)
-        check_thetas = [(doc_id, thetas_approx[doc_id].shape) for doc_id in range(
-            len(thetas_approx)) if thetas_approx[doc_id].shape != (self.num_topics,)]
-        if len(check_thetas) > 0:
-            self._logger.warning(
-                f"-- -- No all the thetas have the same shape: {check_thetas}")
-
+    
         # Calculate evaluation metrics
         self._logger.info(
             f"-- -- Calculating evaluation metrics..."
         )
-        wdt = self.get_word_topic_distribution()
+        wdt = self.get_betas()
         topics = self.print_topics(verbose=False)
         topics_ = [topics[k] for k in topics.keys()]
         metrics = self.get_coherence(self.train_data, topics_, all=True)
@@ -1397,24 +1343,15 @@ class BERTopicModel(TopicModel):
         self._logger.info(
             f"-- -- Calculating topics and distributions..."
         )
-
-        document_probas, doc_topic_probas = self.group_docs_to_topics(
-            thetas_approx)
-        self._logger.info(
-            f"-- -- Document-topic probability matrix shape {np.array(doc_topic_probas).shape}")
-
-        topic_reses, topic_res_nums = [], []
-        for index in range(len(self.train_data)):
-            a, b = self.predict_doc_with_probs(index, topics)
-            topic_reses.append(a)
-            topic_res_nums.append(b)
+        
+        self.thetas = self.get_thetas(texts)
 
         # Calculate bow
         bow_mat = self.get_bow()
 
         # Save the model data
         self.save_results(
-            document_probas, doc_topic_probas, wdt, self.train_data, metrics, topics, topic_reses, topic_res_nums, bow_mat)
+            self.thetas, wdt, self.train_data, metrics, topics, bow_mat, self.vocab)
 
         return
 
@@ -1472,90 +1409,58 @@ class BERTopicModel(TopicModel):
             [print(f"Topic {k}: {v}") for k, v in self.topics.items()]
         return self.topics
 
-    def group_docs_to_topics(
+    def get_thetas(
         self,
-        thetas_approx: np.ndarray,
-    ) -> Tuple[List[np.ndarray], Dict]:
+        texts: List[str],
+    ) -> np.ndarray:
         """
-        Calculate doc_prob_topic and topics_probs. If the model is not loaded, calculate the values and save them for later use. Otherwise, return the saved values.
+        Calculate document-topic distribtuion. If the model is not loaded, calculate the values and save them for later use. Otherwise, return the saved values.
 
         Parameters
         ----------
-        thetas_aprox : np.ndarray
-            A Dx K matrix containing the topic distributions for all input documents with D being the documents and K the topics.
+        texts : List[str]
+            List of documents to calculate the topic distribution for.
 
         Returns
         -------
-        doc_prob_topic : List[np.ndarray]
-            List of numpy arrays of length D, where each numpy array has shape (T,) and T is the number of topics from the topic model. For each document, it contains a list of topic probabilities.
-        topics_probs : Dict
-            Dictionary with keys the ids of the topics. For each topic, it contains a list of tuples [(doc_id, probability)...]. Each tuple has a document id, representing the row id of the document, and probability the document belong to this topic. For each topic, it only contains a list of documents that are the most likely associated with that topic.
+        np.ndarray
+            A Dx K matrix containing the topic distributions for all input documents with D being the documents and K the topics.
         """
 
         if not self.load_model:
 
             self._logger.info(
-                f"-- -- Calculating doc_prob_topic and topics_probs...")
-            # Calculate doc_prob_topic (list of numpy.ndarray, i.e. list[numpy.ndarray]), where each numpy.ndarray has dimension (T,)
-            doc_prob_topic = [row for row in thetas_approx]
+                f"-- -- Calculating thetas...")
 
-            # Calculate topics_probs
-            topics_probs = {}
-            for tpc in range(self.num_topics):
-                topic_docs = []
-                for doc_id, doc in enumerate(doc_prob_topic):
-                    try:
-                        topic_docs.append((doc_id, doc[tpc]))
-                    except Exception as e:
-                        print(e)
-                topic_docs.sort(key=lambda x: x[1], reverse=True)
-                topics_probs[tpc] = topic_docs
+            # topic_distr = D x K matrix containing the topic distributions
+            # for all input documents.
+            thetas_approx, _ = self.model.approximate_distribution(texts)
+            check_thetas = [(doc_id, thetas_approx[doc_id].shape) for doc_id in range(
+                len(thetas_approx)) if thetas_approx[doc_id].shape != (self.num_topics,)]
+            if len(check_thetas) > 0:
+                self._logger.warning(
+                    f"-- -- No all the thetas have the same shape: {check_thetas}")
+            self.thetas = thetas_approx
+            
+            return self.thetas    
+            
 
-            # Sort the documents by topics based on their probability in descending order
-            for k, v in topics_probs.items():
-                topics_probs[k].sort(key=lambda a: a[1], reverse=True)
-
-            # Calculate doc_to_topics
-            # A dictionary, for each document key, contains a list of tuples with topic id and probability sorted in descending order
-            doc_to_topics = {}
-            for doc_id, doc in enumerate(doc_prob_topic):
-                doc_topics = list(enumerate(doc))
-                doc_topics.sort(key=lambda a: a[1], reverse=True)
-                doc_to_topics[doc_id] = doc_topics
-
-            self.doc_to_topics = doc_to_topics
-            self.document_probas = topics_probs
-            self.doc_topic_probas = doc_prob_topic
-
-        return self.document_probas, self.doc_topic_probas
-
-    def get_word_topic_distribution(
+    def get_betas(
         self
-    ) -> Dict:
+    ) -> np.ndarray:
         """
         Calculate the word-topic distribution. If the model is not loaded, calculate the values and save them for later use. Otherwise, return the saved values.
 
-        Data structure
-            {
-            [word1]: [topic1, topic2, topic3...]
-            [word2]: [topic1, topic2, topic3...]
-            [word3]: [topic1, topic2, topic3...]
-            ...
-            }
-
         Returns
         -------
-        Dict
-            Dictionary with keys the words and values a list of probabilities of the word belonging to topics.
+        np.ndarray
+            Array of word-topic distribution
         """
 
         if not self.load_model:
-            topic_term_matrix = self.model.c_tf_idf_.toarray()
+            self.betas = self.model.c_tf_idf_.toarray()
 
-            self.word_topic_distribution = {
-                word: topic_term_matrix[:, id] for id, word in enumerate(self.vocab)}
-
-        return self.word_topic_distribution
+        return self.betas
 
 
 class TopicGPTModel(TopicModel):
@@ -1786,7 +1691,7 @@ class TopicGPTModel(TopicModel):
 
         # Save the model data
         self.save_results(
-            None, None, None, self.train_data, None, topics, None, None,  None, save_model=False, second_topics=second_topics)
+            None, None, self.train_data, None, topics, None, None, save_model=False, second_topics=second_topics)
 
         return
 
@@ -1838,7 +1743,7 @@ class TopicGPTModel(TopicModel):
         else:
             return self.topics
 
-    def group_docs_to_topics(self) -> Tuple[List[np.ndarray], Dict]:
+    def get_thetas(self) -> Tuple[List[np.ndarray], Dict]:
         """
         Calculate doc_prob_topic and topics_probs. If the model is not loaded, calculate the values and save them for later use. Otherwise, return the saved values.
         """
@@ -1848,7 +1753,7 @@ class TopicGPTModel(TopicModel):
 
         return None
 
-    def get_word_topic_distribution(
+    def get_betas(
         self
     ) -> Dict:
         """

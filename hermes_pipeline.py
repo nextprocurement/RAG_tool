@@ -376,6 +376,13 @@ def main():
                 models = [args.model_type]
             
             for model_type in models:
+                
+                if model_type == 'Ctm':
+                    this_args.num_iters = 50
+                    logger.info(f"-- -- Training model with {this_args.num_iters} iterationss because it is a Ctm model...")
+                else:
+                    this_args.num_iters = args.num_iters
+                    
                 model = train_model(
                     model_path = model_path.as_posix(),
                     model_type = model_type,
@@ -447,6 +454,8 @@ def main():
         logger.info(f"### 4. Training ###")
         logger.info("#"*80)
         
+        load_data_path = path_save.parent / (path_save.stem + "_embeddings.parquet") # Path to the output file from the previous step
+        
         path_save = path_root_save / '4.training'
         if not path_save.exists():
             path_save.mkdir(parents=True)
@@ -476,6 +485,12 @@ def main():
                 models = [args.model_type]
             
             for model_type in models:
+                if model_type == 'Ctm':
+                    this_args.num_iters = 50
+                    logger.info(f"-- -- Training model with {this_args.num_iters} iterationss because it is a Ctm model...")
+                else:
+                    this_args.num_iters = args.num_iters
+                    
                 model = train_model(
                     model_path = model_path.as_posix(),
                     model_type = model_type,

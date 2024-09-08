@@ -1,0 +1,9 @@
+{
+    "name": "stops_txt",
+    "description": "",
+    "valid_for": "stopwords",
+    "visibility": "Public",
+    "wordlist": [
+        "él"
+    ]
+}

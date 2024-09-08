@@ -6,8 +6,8 @@ from itertools import product
 from typing import List, Optional, Union
 import gensim.downloader as api
 import numpy as np
-from src.utils.utils import init_logger
 
+from src.utils.tm_utils import create_model
 
 class TMMatcher(object):
     """
@@ -18,8 +18,6 @@ class TMMatcher(object):
         self,
         wmd_model: str = 'word2vec-google-news-300',
         logger: Optional[logging.Logger] = None,
-        path_logs: pathlib.Path = pathlib.Path(
-            __file__).parent.parent.parent / "data/logs"
     ) -> None:
         """
         Initialize the TopicSelector class.
@@ -31,7 +29,7 @@ class TMMatcher(object):
         path_logs : pathlib.Path, optional
             Path for saving logs.
         """
-        self._logger = logger if logger else init_logger(__name__, path_logs)
+        self._logger = logger if logger else logging.getLogger(__name__)
         self._wmd_model = api.load(wmd_model)      
 
         return
@@ -97,7 +95,7 @@ class TMMatcher(object):
                 
         return wmd_sims
 
-    def iterative_matching(self, models, N, metric='wmd', seed=2357_11):
+    def iterative_matching(self, models, N, seed=2357_11):
         """
         Performs an iterative pairing process between the topics of multiple models.
 
@@ -155,18 +153,11 @@ def main():
     parser.add_argument(
         "--N", type=int, help="Number of matches (topics to evaluate)", default=2)
 
-    betas_mats = []
-    args = parser.parse_args()
-    for betas_path in args.betas_paths.split(","):
-        betas = np.load(betas_path)
-        if betas.shape[0] > betas.shape[1]:
-            betas = betas.T
-        betas_mats.append(betas)
 
-    matcher = TMMatcher()
-    matches = matcher.iterative_matching(betas_mats, args.N)
+    #matcher = TMMatcher()
+    #matches = matcher.iterative_matching(betas_mats, args.N)
 
-    print("Matches:", matches)
+    #print("Matches:", matches)
 
 
 if __name__ == '__main__':

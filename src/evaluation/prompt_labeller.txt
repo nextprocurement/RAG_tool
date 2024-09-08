@@ -1,4 +1,4 @@
-Given a set of keywords representing a topic assign a label to the topic. You must always assign a label to the topic that CANNOT be LABEL. The label should be in the same language the keywords are.
+Given a set of keywords representing a topic assign a label to the topic. You must always assign a label to the topic that CANNOT be LABEL. The label should be in English.
 
 Your response should alwys be just the LABEL.
 
