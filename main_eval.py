@@ -8,6 +8,7 @@ import pandas as pd
 from scipy import sparse
 import yaml
 from src.evaluation.labeller import TopicLabeller
+from src.evaluation.retriever import Index
 from src.utils.tm_utils import create_model
 from src.evaluation.tm_matcher import TMMatcher
 from src.utils.utils import init_logger
@@ -43,12 +44,6 @@ def main():
         default="/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/out/non_optimized/4.training/datos_modelo_es_Mallet_df_merged_14_topics_45_ENTREGABLE/MalletLda_20"
     )
     parser.add_argument(
-        "--path_raw_corpus",
-        help="Path to the raw corpus",
-        required=False,
-        default="/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/out/optimized/2.preprocessing/datos_modelo_es_Mallet_df_merged_14_topics_45_ENTREGABLE_embeddings.parquet"
-    )
-    parser.add_argument(
         "--id_fld",
         help="Field name for the id",
         required=False,
@@ -73,11 +68,6 @@ def main():
     labeller = TopicLabeller(logger=logger)
     
     # ***********************************************************************
-    # Load raw corpus
-    # ***********************************************************************
-    df_raw_corpus = pd.read_parquet(args.path_raw_corpus)
-    
-    # ***********************************************************************
     # Get models topics, betas and thetas
     # ***********************************************************************
     models = [pathlib.Path(args.model_1_path), pathlib.Path(args.model_2_path)]
@@ -87,9 +77,10 @@ def main():
     models_thetas = []
     models_topics = []
     models_vocabs = []
+    models_labels = []
     for m in range(len(models)):
         params_inference = {
-            'load_data_path': args.path_raw_corpus,
+            'load_data_path': "",
             'model_path': models[m],
             'load_model': True,
         }
@@ -127,6 +118,7 @@ def main():
         # TODO: Encontrar el fichero que es parquet
         
         df_corpus = pd.read_parquet("/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/out/optimized/4.training/datos_modelo_es_Mallet_df_merged_14_topics_45_ENTREGABLE/MalletLda_20/datos_modelo_es_Mallet_df_merged_14_topics_45_ENTREGABLE_embeddings_preproc.parquet")
+        corpus = [el.split() for el in df_corpus["lemmas"].tolist()]
         
         ##########
         # VOCAB #
@@ -150,7 +142,7 @@ def main():
                     try:
                         wd_ids.append(vocab_w2id[word])
                     except Exception as e:
-                        #print(f"Word {word} not found in vocabulary") 
+                        #print(f"Word {word} not found in vocabulary") –
                         continue
 
                 # sum of the weights that topic assings to each word in the document
@@ -215,24 +207,57 @@ def main():
         top_docs_2_thetas = [docs[2] for docs in top_docs_per_topic_text]
         
         # Get topic labels
-        topic_labels = labeller.label_topics(models_topics[m], path_save=f"{models[m]}/topic_labels.txt")
+        if pathlib.Path(f"{models[m]}/topic_labels.txt").exists():
+            continue
+        else:
+            topic_labels = labeller.label_topics(models_topics[m], path_save=f"{models[m]}/topic_labels.txt")
+            models_labels.append(topic_labels)
 
-        df = pd.DataFrame(
-            {
-                "Topic ID": range(len(models_topics[m])),
-                "Topic Label": topic_labels,
-                "Chemical description": models_topics[m],
-                "S3 most representative document #1": top_docs_0,
-                "S3 most representative document #2": top_docs_1,
-                "S3 most representative document #3": top_docs_2,
-                "thetas most representative document #1": top_docs_0_thetas,
-                "thetas most representative document #2": top_docs_1_thetas,
-                "thetas most representative document #3": top_docs_2_thetas,
-            }
-        )
+            df = pd.DataFrame(
+                {
+                    "Topic ID": range(len(models_topics[m])),
+                    "Topic Label": topic_labels,
+                    "Chemical description": models_topics[m],
+                    "S3 most representative document #1": top_docs_0,
+                    "S3 most representative document #2": top_docs_1,
+                    "S3 most representative document #3": top_docs_2,
+                    "thetas most representative document #1": top_docs_0_thetas,
+                    "thetas most representative document #2": top_docs_1_thetas,
+                    "thetas most representative document #3": top_docs_2_thetas,
+                }
+            )
 
-        path_save = f"{models[m]}/most_representative_docs_per_topic.xlsx"
-        df.to_excel(path_save)
+            path_save = f"{models[m]}/most_representative_docs_per_topic.xlsx"
+            df.to_excel(path_save)
+    
+    # ***********************************************************************
+    # Index
+    # ***********************************************************************
+    logger.info("-- -- Indexing corpus...")
+    time_start = time.time()
+    hermes_index = Index(corpus, df_corpus.id_tm.tolist())
+    logger.info(f"-- -- Corpus indexed in {time.time()-time_start} minutes")
+    
+    print("** Matches found:")
+    for match in matches:
+        match_0 = match[0][1]
+        match_0_tpc_desc = models_topics[0][match_0]
+        match_0_tpc_label = models_labels[0][match_0]
+        
+        match_1 = match[1][1]
+        match_1_tpc_desc = models_topics[1][match_1]
+        match_1_tpc_label = models_labels[1][match_1]
+    
+        
+        
+        
+        print("-- -- Optimized model topic:", match[0][1], models_topics[0][match[0][1]])
+        print("-- -- Non-optimized model topic:", match[1][1], models_topics[1][match[1][1]])
+        print("-+-"*20)
+    
+    
+    
+    
     
 if __name__ == "__main__":
    main() 

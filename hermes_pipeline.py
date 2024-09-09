@@ -194,7 +194,7 @@ def main():
                 df_out = process_dataframe(
                     path=args.data_path,
                     config=config['acr'],
-                    action="both",
+                    action="complete",
                     acronym_detector=detector.module if detector else None,
                     acronym_expander=expander.module if expander else None,
                     context_window=args.context_window,
@@ -310,6 +310,7 @@ def main():
                 # Assign new values to the copied Namespace object
                 this_args.model_path = model_path.as_posix()
                 this_args.load_data_path = load_data_path.as_posix()
+                this_args.num_topics = config['equiv']['num_topics']
                                 
                 model = train_model(
                     model_path = model_path.as_posix(),
@@ -367,6 +368,7 @@ def main():
             # Assign new values to the copied Namespace object
             this_args.model_path = model_path.as_posix()
             this_args.load_data_path = load_data_path.as_posix()
+            this_args.num_topics = args.num_topics
             
             if args.model_type == 'all':
                 logger.info( "-- -- Training all models...")
@@ -476,6 +478,7 @@ def main():
             this_args.model_path = model_path.as_posix()
             this_args.load_data_path = load_data_path.as_posix()
             this_args.further_proc = False
+            this_args.num_topics = args.num_topics
             
             if args.model_type == 'all':
                 logger.info( "-- -- Training all models...")
