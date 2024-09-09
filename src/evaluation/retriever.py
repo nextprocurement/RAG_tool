@@ -11,7 +11,6 @@ class Index(object):
         self.sentences = []
         self.mapping = []
         for doc_id, document in enumerate(corpus):
-            
             # Split the document into sentences based on "."
             substrings = document.split(".")
             substrings = [s.strip() for s in substrings if s.strip()]  #

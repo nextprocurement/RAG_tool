@@ -197,6 +197,7 @@ class TopicModel(ABC):
             self._logger.info(f"-- -- Applying further processing to the data")
             df['lemmas'] = df['lemmas'].apply(tkz_clean_str)
             self._logger.info(f"-- -- Further processing done in {(time.time() - start_time) / 60} minutes. Saving to {preproc_file}")
+            
         
         # filter extrems
         self._logger.info(f"-- -- Filtering out documents with less than {min_lemas} lemas")
@@ -862,7 +863,8 @@ class MalletLdaModel(TopicModel):
 
     def print_topics(
         self,
-        verbose=False
+        verbose=False,
+        top_k: int = 15
     ) -> dict:
         """
         Print the list of topics for the topic model
@@ -883,7 +885,7 @@ class MalletLdaModel(TopicModel):
             for k in range(self.num_topics):
                 words = [
                     self.vocab[w]
-                    for w in np.argsort(self.betas[k])[::-1][0:self.num_topics]
+                    for w in np.argsort(self.betas[k])[::-1][0:top_k]
                 ]
                 self.topics[k] = words
 
@@ -1114,7 +1116,8 @@ class CtmModel(TopicModel):
 
     def print_topics(
         self,
-        verbose=False
+        verbose=False,
+        top_k: int = 15
     ) -> dict:
         """
         Print the list of topics for the topic model
@@ -1131,7 +1134,7 @@ class CtmModel(TopicModel):
         """
 
         if not self.load_model:
-            topics = self.model.get_topics(self.topn)
+            topics = self.model.get_topics(top_k)
             self.topics = {k: [v for v in topics[k]] for k in topics.keys()}
 
         if verbose:
@@ -1383,7 +1386,8 @@ class BERTopicModel(TopicModel):
 
     def print_topics(
         self,
-        verbose=False
+        verbose=False,
+        top_k: int = 15
     ) -> dict:
         """
         Print the list of topics for the topic model
@@ -1403,7 +1407,7 @@ class BERTopicModel(TopicModel):
 
             self.topics = dict()
             for k, v in self.model.get_topics().items():
-                self.topics[k] = [el[0] for el in v]
+                self.topics[k] = [el[0] for el in v][:top_k]
 
         if verbose:
             [print(f"Topic {k}: {v}") for k, v in self.topics.items()]

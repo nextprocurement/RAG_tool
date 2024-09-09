@@ -94,7 +94,7 @@ def main():
     parser.add_argument(
         "--num_topics",
         help="Number of topics",
-        type=int, default=20, required=False)
+        type=int, default=14, required=False)
     parser.add_argument(
         "--num_iters",
         help="Number of iterations",
@@ -120,7 +120,7 @@ def main():
         "--further_proc",
         help="Whether to further process the data.",
         type=bool, 
-        default=False
+        default=True
     )
     
     # ***********************************************************************

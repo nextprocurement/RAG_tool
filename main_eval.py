@@ -5,15 +5,12 @@ import pathlib
 import time
 import numpy as np
 import pandas as pd
-from scipy import sparse
 import yaml
 from src.evaluation.labeller import TopicLabeller
 from src.evaluation.retriever import Index
 from src.utils.tm_utils import create_model
 from src.evaluation.tm_matcher import TMMatcher
 from src.utils.utils import init_logger
-from fuzzywuzzy import fuzz
-from fuzzywuzzy import process
 import pandas as pd
 
 
@@ -35,13 +32,13 @@ def main():
         "--model_1_path", # Optimized
         help="Path to the first model",
         required=False,
-        default="/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/out/optimized/4.training/datos_modelo_es_Mallet_df_merged_14_topics_45_ENTREGABLE/MalletLda_20"
+        default="/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/out/optimized/4.training/datos_modelo_es_Mallet_df_merged_14_topics_45_ENTREGABLE/MalletLda_14"
     )
     parser.add_argument(
         "--model_2_path", # Non-optimized
         help="Path to the second model",
         required=False,
-        default="/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/out/non_optimized/4.training/datos_modelo_es_Mallet_df_merged_14_topics_45_ENTREGABLE/MalletLda_20"
+        default="/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/out/non_optimized/4.training/datos_modelo_es_Mallet_df_merged_14_topics_45_ENTREGABLE/MalletLda_14"
     )
     parser.add_argument(
         "--id_fld",
@@ -78,6 +75,8 @@ def main():
     models_topics = []
     models_vocabs = []
     models_labels = []
+    models_most_repr = []
+    
     for m in range(len(models)):
         params_inference = {
             'load_data_path': "",
@@ -117,7 +116,7 @@ def main():
         ##########
         # TODO: Encontrar el fichero que es parquet
         
-        df_corpus = pd.read_parquet("/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/out/optimized/4.training/datos_modelo_es_Mallet_df_merged_14_topics_45_ENTREGABLE/MalletLda_20/datos_modelo_es_Mallet_df_merged_14_topics_45_ENTREGABLE_embeddings_preproc.parquet")
+        df_corpus = pd.read_parquet("/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/out/optimized/4.training/datos_modelo_es_Mallet_df_merged_14_topics_45_ENTREGABLE/MalletLda_14/datos_modelo_es_Mallet_df_merged_14_topics_45_ENTREGABLE_embeddings_preproc.parquet")
         corpus = [el.split() for el in df_corpus["lemmas"].tolist()]
         
         ##########
@@ -226,6 +225,8 @@ def main():
                     "thetas most representative document #3": top_docs_2_thetas,
                 }
             )
+            
+            models_most_repr.append(df)
 
             path_save = f"{models[m]}/most_representative_docs_per_topic.xlsx"
             df.to_excel(path_save)
@@ -235,11 +236,13 @@ def main():
     # ***********************************************************************
     logger.info("-- -- Indexing corpus...")
     time_start = time.time()
-    hermes_index = Index(corpus, df_corpus.id_tm.tolist())
+    hermes_index = Index(df_corpus.raw_text.tolist(), df_corpus.id_tm.tolist())
     logger.info(f"-- -- Corpus indexed in {time.time()-time_start} minutes")
     
     print("** Matches found:")
+    all_info = []
     for match in matches:
+        
         match_0 = match[0][1]
         match_0_tpc_desc = models_topics[0][match_0]
         match_0_tpc_label = models_labels[0][match_0]
@@ -247,17 +250,53 @@ def main():
         match_1 = match[1][1]
         match_1_tpc_desc = models_topics[1][match_1]
         match_1_tpc_label = models_labels[1][match_1]
-    
         
+        # Get the most representative document for each topic based on the retriever
+        top_docs_retr = hermes_index.retrieve_top_docs(match_0_tpc_label, 3)
+        most_repr_optim_s3 = [models_most_repr[0].iloc[match_0]["S3 most representative document #1"], models_most_repr[0].iloc[match_0]["S3 most representative document #2"], models_most_repr[0].iloc[match_0]["S3 most representative document #3"]]
+        most_repr_optim_thetas = [models_most_repr[0].iloc[match_0]["thetas most representative document #1"], models_most_repr[0].iloc[match_0]["thetas most representative document #2"], models_most_repr[0].iloc[match_0]["thetas most representative document #3"]]
         
+        top_docs_retr_1 = hermes_index.retrieve_top_docs(match_1_tpc_label, 3)
+        most_repr_non_optim_s3 = [models_most_repr[1].iloc[match_1]["S3 most representative document #1"], models_most_repr[1].iloc[match_1]["S3 most representative document #2"], models_most_repr[1].iloc[match_1]["S3 most representative document #3"]]
+        most_repr_non_optim_thetas = [models_most_repr[1].iloc[match_1]["thetas most representative document #1"], models_most_repr[1].iloc[match_1]["thetas most representative document #2"], models_most_repr[1].iloc[match_1]["thetas most representative document #3"]]
         
-        print("-- -- Optimized model topic:", match[0][1], models_topics[0][match[0][1]])
-        print("-- -- Non-optimized model topic:", match[1][1], models_topics[1][match[1][1]])
-        print("-+-"*20)
+        all_info.append(
+            [
+                match_0,
+                match_0_tpc_desc,
+                match_0_tpc_label,
+                match_1,
+                match_1_tpc_desc,
+                match_1_tpc_label,
+                top_docs_retr,
+                most_repr_optim_s3,
+                most_repr_optim_thetas,
+                top_docs_retr_1,
+                most_repr_non_optim_s3,
+                most_repr_non_optim_thetas
+            ]
+        )
     
+    df_results = pd.DataFrame(
+        all_info,
+        columns=[
+            "Match 0",
+            "Match 0 Topic Description",
+            "Match 0 Topic Label",
+            "Match 1",
+            "Match 1 Topic Description",
+            "Match 1 Topic Label",
+            "Top Docs Optimized",
+            "Most representative docs Optimized S3",
+            "Most representative docs Optimized Thetas",
+            "Top Docs Non-optimized",
+            "Most representative docs Non-optimized S3",
+            "Most representative docs Non-optimized Thetas"
+        ]
+    )
     
-    
-    
+    df_results.to_excel("results.xlsx")
+
     
 if __name__ == "__main__":
    main() 
