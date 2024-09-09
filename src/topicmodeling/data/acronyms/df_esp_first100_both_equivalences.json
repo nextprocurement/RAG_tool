@@ -1,14 +1,12 @@
 {
-    "name": "df_esp_first100_both_equivalences.json",
+    "name": "df_esp_first100_both",
     "description": "",
     "valid_for": "acronyms",
     "visibility": "Public",
     "wordlist": [
-        "vp:vía_pública",
-        "lp:Línea_Perimetral",
-        "a-6:Autovía_de_Madrid_a_Oporto",
+        "vp:Vía_Pública",
+        "a-6:Autovía_6",
         "fitur:Feria_Internacional_de_Turismo",
-        "hogei urte:100_años",
         "eets:Encefalopatías_espongiformes_transmisibles",
         "ceip:Centro_de_Educación_Infantil_y_Primaria",
         "usc:Universidad_de_Santiago_de_Compostela",
@@ -18,9 +16,9 @@
         "po:Planes_de_Ordenación",
         "se23:Servicio_de_mantenimiento",
         "e4:Entrevías_4",
-        "sc-21:Sistema_de_Control_de_21",
+        "sc-21:Servicio_de_Conservación",
         "se25:calle",
-        "cc:sección_veinticinco",
+        "cc:Servicio_de_Educación",
         "c32:ciento_treinta_y_dos",
         "sp20:Sistema_de_Puntos",
         "aph:Administración_Pública_de_la_Hacienda",
@@ -32,9 +30,9 @@
         "recored:Red_de_Recorridos_Turísticos_Preferentes_en_Enclaves_Patrimonio_de_la_Humanidad_del_Atlántico_de_la_Macaronesia",
         "pacs:Picture_Archiving_and_Communication_System",
         "rm-560:Red_Municipal",
-        "rm-d8:Red_de_carreteras_de_la_Diputación_de_Murcia",
-        "ue:Unión_Europea",
-        "pib:Producto_Interior_Bruto",
-        "cnmc:Comisión_Nacional_de_los_Mercados_y_la_Competencia"
+        "rm-d8:ramal_de_la_D-8",
+        "cnmc:Unión_Europea",
+        "pib:Comisión_Nacional_de_los_Mercados_y_la_Competencia",
+        "ue:Producto_Interior_Bruto"
     ]
 }

@@ -194,6 +194,7 @@ if __name__ == "__main__":
     else:
         suffix = "_out"  
 
+    print(df_out.columns)
     # Save the processed DataFrame to an Excel file
     path = pathlib.Path(args.data_path)
     path_out = path.with_stem(path.stem + suffix).with_suffix('.xlsx')

@@ -15,6 +15,59 @@ from src.acronyms.acronym_expander import AcronymExpanderModule
 from src.utils.vector_store_utils import Chunker
 from src.acronyms.check_candidate import NERTextAnalyzer
 
+def reorder_acronyms(acronyms_dict):
+    acronyms = list(acronyms_dict.keys())
+    expansions = list(acronyms_dict.values())
+    assigned_expansions = [None] * len(acronyms)
+
+    # Try matching with initial letter
+    for i, acronym in enumerate(acronyms):
+        for j, expansion in enumerate(expansions):
+            if assigned_expansions[j] is None and expansion.lower().startswith(acronym[0].lower()):
+                assigned_expansions[j] = acronym
+                break
+
+    # Matching for the highest number of initial letters
+    for i, acronym in enumerate(acronyms):
+        if acronym not in assigned_expansions:
+            max_match = -1
+            best_index = -1
+            for j, expansion in enumerate(expansions):
+                if assigned_expansions[j] is None:
+                    matches = sum(1 for a, b in zip(acronym.lower(), expansion.lower()) if a == b)
+                    if matches > max_match:
+                        max_match = matches
+                        best_index = j
+            if best_index != -1:
+                assigned_expansions[best_index] = acronym
+
+    # Sorted dict
+    corrected_dict = {assigned_expansions[i]: expansions[i] for i in range(len(acronyms)) if assigned_expansions[i] is not None}
+    return corrected_dict
+
+def substitute_acronyms(row, column_name):
+    text = row[column_name]    
+    if row['Expansions'] != "/":
+        acronyms = row['Acronyms Detected(LLM)'].split(', ')
+        expansions = row['Expansions'].split(', ')
+        
+        # Dict with acronyms and expansions
+        acronyms_dict = dict(zip(acronyms, expansions))
+        # Reorder acronyms
+        if len(acronyms_dict) > 1:
+            acronyms_dict = reorder_acronyms(acronyms_dict)
+
+        for acronym, expansion in acronyms_dict.items():
+            if expansion == '/':
+                continue
+            pattern1 = re.compile(r'(?<!\w)' + re.escape(acronym) + r'(?!\w)', re.IGNORECASE)
+            text = pattern1.sub(expansion, text)
+            pattern2 = re.compile(r'\b' + r'\.?'.join(re.escape(char) for char in acronym) + r'\b', re.IGNORECASE)
+            text = pattern2.sub(expansion, text)        
+        return text
+    else:
+        return text
+
 def generate_acronym_expansion_json(file_path, output_dir):
     """
     Generate a JSON file containing the acronyms and their expansions from an Excel file.
@@ -25,7 +78,6 @@ def generate_acronym_expansion_json(file_path, output_dir):
     #Load the Excel file into a DataFrame
     print(f"Loading excel file from: {file_path}")
     df_out = pd.read_excel(file_path)
-    print(f"File with {len(df_out)} rows loaded.")
 
     acronym_expansion_dict = {}
     for index, row in df_out.iterrows():
@@ -112,6 +164,7 @@ def process_dataframe(
         df['Acronyms Detected(LLM)'] = ''
     if action in ["expand", "both"]:
         df['Expansions'] = ''
+        df['text_substituted'] = ''
 
     # Iterate over each row in the DataFrame
     for identifier, row in df.iterrows():
@@ -207,21 +260,9 @@ def process_dataframe(
     # Return only the relevant columns based on the action
     if action == "detect":
         return df[[column_name, 'Acronyms Detected(LLM)']]
-    elif action == "complete":
-        def substitute_acronyms(row):
-            if row['Expansions'] != "/":
-                text = row['texto_sin_preprocesar'].lower()
-                acronyms = row['Acronyms Detected(LLM)'].split(', ') 
-                expansions = row['Expansions'].split(', ')
-                
-                for acronym, expansion in zip(acronyms, expansions):
-                    text = text.replace(acronym, expansion)
-                return text
-            else:
-                return row['texto_sin_preprocesar'].lower()
-
-        df['text_substituted'] = df.apply(substitute_acronyms, axis=1)
-        return df
+    elif action in ["complete", "both"]:
+        df['text_substituted'] = df.apply(substitute_acronyms, axis=1, args=(column_name,))
+        return df[[column_name,'Acronyms Detected(LLM)','Expansions', 'text_substituted']]
     else:
         # Ensure that acronyms have been detected before expanding
         if 'Acronyms Detected(LLM)' not in df.columns or df['Acronyms Detected(LLM)'].isnull().all():
