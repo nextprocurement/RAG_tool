@@ -1,7 +1,9 @@
 
 
 import argparse
+import os
 import pathlib
+import sys
 import time
 import numpy as np
 import pandas as pd
@@ -12,7 +14,7 @@ from src.utils.tm_utils import create_model
 from src.evaluation.tm_matcher import TMMatcher
 from src.utils.utils import init_logger
 import pandas as pd
-
+import glob
 
 def load_config(config_path):
     """
@@ -32,13 +34,13 @@ def main():
         "--model_1_path", # Optimized
         help="Path to the first model",
         required=False,
-        default="/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/out/optimized/4.training/datos_modelo_es_Mallet_df_merged_14_topics_45_ENTREGABLE/MalletLda_14"
+        default="/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/out2/optimized/4.training/datos_modelo_es_Mallet_df_merged_14_topics_45_ENTREGABLE/MalletLda_14"
     )
     parser.add_argument(
         "--model_2_path", # Non-optimized
         help="Path to the second model",
         required=False,
-        default="/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/out/non_optimized/4.training/datos_modelo_es_Mallet_df_merged_14_topics_45_ENTREGABLE/MalletLda_14"
+        default="/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/out2/non_optimized/4.training/datos_modelo_es_Mallet_df_merged_14_topics_45_ENTREGABLE/MalletLda_14"
     )
     parser.add_argument(
         "--id_fld",
@@ -85,7 +87,11 @@ def main():
         }
 
         model = create_model(model_types[m], **params_inference)
-        topics = model.print_topics()
+        if m == 0: # Optimized
+            tfidf = True
+        else: # Non-optimized
+            tfidf = tfidf
+        topics = model.print_topics(tfidf=tfidf)
         topics = [topics[topic] for topic in topics]
         
         models_topics.append(topics)
@@ -94,7 +100,7 @@ def main():
         models_vocabs.append(model.vocab)
         
     tm_matcher = TMMatcher()
-    matches = tm_matcher.iterative_matching(models_topics, 3)
+    matches = tm_matcher.iterative_matching(models_topics, len(models_topics[0]))
 
     print("** Matches found:")
     for match in matches:
@@ -116,7 +122,14 @@ def main():
         ##########
         # TODO: Encontrar el fichero que es parquet
         
-        df_corpus = pd.read_parquet("/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/out/optimized/4.training/datos_modelo_es_Mallet_df_merged_14_topics_45_ENTREGABLE/MalletLda_14/datos_modelo_es_Mallet_df_merged_14_topics_45_ENTREGABLE_embeddings_preproc.parquet")
+        file_pattern = os.path.join(models[m], '*_preproc.parquet')
+        try:
+            path_tr_corpus = glob.glob(file_pattern)[0]
+        except IndexError as e:
+            print(f"Error: {e}")
+            sys.exit(f"File not found: {file_pattern}")
+        
+        df_corpus = pd.read_parquet(path_tr_corpus)
         corpus = [el.split() for el in df_corpus["lemmas"].tolist()]
         
         ##########
@@ -150,6 +163,7 @@ def main():
                 except Exception as e:
                     #print(f"Error: {e}")
                     import pdb; pdb.set_trace()
+
 
         print(f"S3 shape: {S3.shape}")
 
@@ -207,10 +221,11 @@ def main():
         
         # Get topic labels
         if pathlib.Path(f"{models[m]}/topic_labels.txt").exists():
-            continue
+            with open(f"{models[m]}/topic_labels.txt", "r") as f:
+                topic_labels = f.readlines()
         else:
             topic_labels = labeller.label_topics(models_topics[m], path_save=f"{models[m]}/topic_labels.txt")
-            models_labels.append(topic_labels)
+            
 
             df = pd.DataFrame(
                 {
@@ -230,6 +245,7 @@ def main():
 
             path_save = f"{models[m]}/most_representative_docs_per_topic.xlsx"
             df.to_excel(path_save)
+        models_labels.append(topic_labels)
     
     # ***********************************************************************
     # Index
@@ -252,11 +268,11 @@ def main():
         match_1_tpc_label = models_labels[1][match_1]
         
         # Get the most representative document for each topic based on the retriever
-        top_docs_retr = hermes_index.retrieve_top_docs(match_0_tpc_label, 3)
+        top_docs_retr = hermes_index.retrieve(match_0_tpc_label, 3)
         most_repr_optim_s3 = [models_most_repr[0].iloc[match_0]["S3 most representative document #1"], models_most_repr[0].iloc[match_0]["S3 most representative document #2"], models_most_repr[0].iloc[match_0]["S3 most representative document #3"]]
         most_repr_optim_thetas = [models_most_repr[0].iloc[match_0]["thetas most representative document #1"], models_most_repr[0].iloc[match_0]["thetas most representative document #2"], models_most_repr[0].iloc[match_0]["thetas most representative document #3"]]
         
-        top_docs_retr_1 = hermes_index.retrieve_top_docs(match_1_tpc_label, 3)
+        top_docs_retr_1 = hermes_index.retrieve(match_1_tpc_label, 3)
         most_repr_non_optim_s3 = [models_most_repr[1].iloc[match_1]["S3 most representative document #1"], models_most_repr[1].iloc[match_1]["S3 most representative document #2"], models_most_repr[1].iloc[match_1]["S3 most representative document #3"]]
         most_repr_non_optim_thetas = [models_most_repr[1].iloc[match_1]["thetas most representative document #1"], models_most_repr[1].iloc[match_1]["thetas most representative document #2"], models_most_repr[1].iloc[match_1]["thetas most representative document #3"]]
         

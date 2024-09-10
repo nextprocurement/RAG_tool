@@ -53,6 +53,6 @@ class TopicLabeller(object):
             
         with open(path_save, 'w', encoding='utf-8') as file:
             for label in tpc_labels:
-                file.write(label)
+                file.write(label + '\n')
                 
         return tpc_labels

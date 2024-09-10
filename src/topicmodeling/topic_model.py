@@ -191,13 +191,12 @@ class TopicModel(ABC):
         preproc_file = pathlib.Path(self.save_path.as_posix()).joinpath(pathlib.Path(self.load_data_path).stem + "_preproc.parquet")
         
         df = load_processed_data(self.load_data_path)
-        
+                
         if further_proc: # remove add stops and equivs
             start_time = time.time()
             self._logger.info(f"-- -- Applying further processing to the data")
             df['lemmas'] = df['lemmas'].apply(tkz_clean_str)
             self._logger.info(f"-- -- Further processing done in {(time.time() - start_time) / 60} minutes. Saving to {preproc_file}")
-            
         
         # filter extrems
         self._logger.info(f"-- -- Filtering out documents with less than {min_lemas} lemas")
@@ -679,6 +678,8 @@ class MalletLdaModel(TopicModel):
             '--remove-stopwords --token-regex "' + self.token_regexp + \
             '" --input %s --output %s'
         cmd = cmd % (corpus_txt_path, corpus_mallet)
+        
+        self._logger.info(f"-- -- Command to be run {cmd}")
 
         try:
             self._logger.info(f'-- -- Running command {cmd}')
@@ -733,14 +734,14 @@ class MalletLdaModel(TopicModel):
         betas = self.get_betas()
         topics = self.print_topics(verbose=False)
         topics_ = [topics[k] for k in topics.keys()]
-        metrics = self.get_coherence(self.train_data, topics_, all=True)
-        
-        """
-        {
+        metrics = {
                 'c_v': 0,
                 'c_uci': 0,
                 'c_npmi': 0
-            }
+            } #self.get_coherence(self.train_data, topics_, all=True)
+        
+        """
+        
         """
         
         self._logger.info(
@@ -864,7 +865,8 @@ class MalletLdaModel(TopicModel):
     def print_topics(
         self,
         verbose=False,
-        top_k: int = 15
+        top_k: int = 15,
+        tfidf: bool = False
     ) -> dict:
         """
         Print the list of topics for the topic model
@@ -881,16 +883,36 @@ class MalletLdaModel(TopicModel):
         """
 
         if not self.load_model:
+            
             self.topics = dict()
-            for k in range(self.num_topics):
-                words = [
-                    self.vocab[w]
-                    for w in np.argsort(self.betas[k])[::-1][0:top_k]
-                ]
-                self.topics[k] = words
-
+            
+            if tfidf:
+                # Calculate betas with downscoring ( Emphasizes words appearing less frequently in topics)
+                self.betas_ds = np.copy(self.betas)
+                if np.min(self.betas_ds) < 1e-12:
+                    self.betas_ds += 1e-12
+                deno = np.reshape((sum(np.log(self.betas_ds)) /
+                                self.num_topics), (len(self.betas.T), 1))
+                deno = np.ones((self.num_topics, 1)).dot(deno.T)
+                self.betas_ds = self.betas_ds * (np.log(self.betas_ds) - deno)
+                
+                for k in range(self.num_topics):
+                    words = [
+                        self.vocab[w]
+                        for w in np.argsort(self.betas_ds[k])[::-1][0:top_k]
+                    ]
+                    self.topics[k] = words
+                    
+            else:
+                for k in range(self.num_topics):
+                    words = [
+                        self.vocab[w]
+                        for w in np.argsort(self.betas[k])[::-1][0:top_k]
+                    ]
+                    self.topics[k] = words
         if verbose:
             [print(f"Topic {k}: {v}") for k, v in self.topics.items()]
+            
         return self.topics
 
     def get_thetas(self):

@@ -28,7 +28,8 @@ preproc:
 
 equiv:
   num_topics : 100
-  further_proc: False
+  further_proc: True
   model_type: "MalletLda"
   path_save : "src/topicmodeling/data/equivalences"
   language : "spanish"
+  top_k : 100

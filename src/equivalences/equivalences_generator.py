@@ -565,7 +565,8 @@ class HermesEquivalencesGenerator(object):
         model_type: str = "MalletLda",
         language: str = "spanish",
         path_save: str = "/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/src/topicmodeling/data/equivalences/cpv45_equivalences_test_vocab.json",
-        optim: bool = False
+        optim: bool = False,
+        top_k: int = 100
     ):
         """
         Generate equivalences for the given words and language.
@@ -596,7 +597,7 @@ class HermesEquivalencesGenerator(object):
             params_inference['mallet_path'] = "/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/src/topicmodeling/Mallet-202108/bin/mallet"
 
             model = create_model(model_type, **params_inference)
-            topics = model.print_topics()
+            topics = model.print_topics(top_k=top_k)
 
             #for i, topic in enumerate(topics):
             #    print("Topic #", i)
