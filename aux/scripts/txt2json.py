@@ -1,7 +1,7 @@
 import json
 import pathlib
 
-path_stops = "/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/src/topicmodeling/data/stops_txt"
+path_stops = "/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/out_no_filter/optimized/stops"
 
 file_count = sum(1 for file in pathlib.Path(path_stops).rglob('*') if file.is_file())
 
@@ -24,6 +24,6 @@ for el, path in enumerate(pathlib.Path(path_stops).rglob('*')):
         "wordlist": words
     }
     
-    path_save = pathlib.Path("/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/src/topicmodeling/data/stops") / f"{path.stem}.json"
+    path_save = pathlib.Path("/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/out_no_filter/optimized/stops_json") / f"{path.stem}.json"
     with open(path_save, 'w') as json_file:
         json.dump(json_data, json_file, indent=4, ensure_ascii=False)
