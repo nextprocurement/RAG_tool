@@ -185,7 +185,7 @@ class Pipe():
         valid_POS = set(['VERB', 'NOUN', 'ADJ', 'PROPN'])
         
         # first filter of raw words (before lemmatization)
-        text = ' '.join([word for word in text.split() if word not in self._stw_list])
+        text = ' '.join([word for word in text.split() if word not in self._stw_list and word != 'él'])
         doc = self._nlp(text)
         lemmatized = [token.lemma_ for token in doc
                       if token.is_alpha

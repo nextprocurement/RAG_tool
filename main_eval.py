@@ -34,13 +34,13 @@ def main():
         "--model_1_path", # Optimized
         help="Path to the first model",
         required=False,
-        default="/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/out2/optimized/4.training/datos_modelo_es_Mallet_df_merged_14_topics_45_ENTREGABLE/MalletLda_14"
+        default="/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/out_no_filter/optimized/4.training/datos_modelo_es_Mallet_df_merged_14_topics_45_ENTREGABLE/MalletLda_14"
     )
     parser.add_argument(
         "--model_2_path", # Non-optimized
         help="Path to the second model",
         required=False,
-        default="/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/out2/non_optimized/4.training/datos_modelo_es_Mallet_df_merged_14_topics_45_ENTREGABLE/MalletLda_14"
+        default="/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/out_no_filter/non_optimized/4.training/datos_modelo_es_Mallet_df_merged_14_topics_45_ENTREGABLE/MalletLda_14"
     )
     parser.add_argument(
         "--id_fld",
@@ -88,9 +88,9 @@ def main():
 
         model = create_model(model_types[m], **params_inference)
         if m == 0: # Optimized
-            tfidf = True
+            tfidf = False
         else: # Non-optimized
-            tfidf = tfidf
+            tfidf = False
         topics = model.print_topics(tfidf=tfidf)
         topics = [topics[topic] for topic in topics]
         
@@ -100,14 +100,23 @@ def main():
         models_vocabs.append(model.vocab)
         
     tm_matcher = TMMatcher()
-    matches = tm_matcher.iterative_matching(models_topics, len(models_topics[0]))
-
-    print("** Matches found:")
+    #matches = tm_matcher.iterative_matching(models_topics, 5)#len(models_topics[0]))
+    """
     for match in matches:
         print("-- -- Optimized model topic:", match[0][1], models_topics[0][match[0][1]])
         print("-- -- Non-optimized model topic:", match[1][1], models_topics[1][match[1][1]])
         print("-+-"*20)
+    """
+    matches = tm_matcher.one_to_one_matching(models_topics[0],models_topics[1],len(models_topics[0]))
     
+
+    print("** Matches found:")
+    for match in matches:
+        print("-- -- Optimized model topic:", match[0], models_topics[0][match[0]])
+        print("-- -- Non-optimized model topic:", match[1], models_topics[1][match[1]])
+        print("-+-"*20)
+        
+    import pdb; pdb.set_trace()
     # ***********************************************************************
     # Get most representative documents for each topic based on S3
     # ***********************************************************************

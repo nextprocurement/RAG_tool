@@ -206,19 +206,23 @@ class TopicModel(ABC):
         self._logger.info(f"-- -- Filtered out {len_df - len(df)} documents with less than {min_lemas} lemas")
         
         # Gensim filtering
+        
         self._logger.info(f"-- -- Filtering out vocabulary with no_below={no_below}, no_above={no_above}, keep_n={keep_n}")
         final_tokens = [el.split() for el in df['lemmas'].values.tolist()]
         dict = corpora.Dictionary(final_tokens)
+        """
         dict.filter_extremes(
             no_below=no_below,
             no_above=no_above, 
             keep_n=keep_n
         )
+                """
         vocabulary = set([dict[idx] for idx in range(len(dict))])
         self._logger.info(f"-- -- Vocabulary size: {len(vocabulary)}")
         
-        df["lemmas"] = df['lemmas'].apply(lambda x: ' '.join([el for el in x.split() if el in vocabulary]))
-        
+        #df["lemmas"] = df['lemmas'].apply(lambda x: ' '.join([el for el in x.split() if el in vocabulary]))
+        df["lemmas"] = df['lemmas'].apply(lambda x: ' '.join([el for el in x.split() if len(el) > 3]))  # remove short words
+
         # Save Gensim dictionary
         self._logger.info(f"-- -- Saving Gensim dictionary")
         GensimFile = self.save_path.joinpath('dictionary.gensim')

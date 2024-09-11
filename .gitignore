@@ -205,3 +205,4 @@ aux/cleaning_enrichment/test_equivalences.ipynb
 data/out
 data/out2
 data/out_pliegos
+data/out_no_filter

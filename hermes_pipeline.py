@@ -287,11 +287,11 @@ def main():
                 path_save_eqs.mkdir(parents=True)
             else:
                 logger.info(f"-- -- Directory {path_save_eqs} already exists")
-                logger.info(f"-- -- Deleting files in {path_save_eqs} from previous runs...")
+                #logger.info(f"-- -- Deleting files in {path_save_eqs} from previous runs...")
                 # delete the files in the directory
-                for file in path_save_eqs.iterdir():
-                    if file.is_file():
-                        file.unlink()
+                #for file in path_save_eqs.iterdir():
+                #    if file.is_file():
+                #        file.unlink()
             
             path_save_eqs = path_save_eqs / file_save
             
@@ -300,62 +300,120 @@ def main():
                 do_train = True,
             )
             
-            for t in range(args.times_equiv):
+            if args.source_eq == "vocabulary":
                 
-                this_path_save_eqs = path_save_eqs.parent / f"{path_save_eqs.stem}_{t+1}.json"
-                
-                logger.info(f"-- -- Running equivalence detection {t+1} out of {args.times_equiv}...")
-        
                 # Train auxiliary topic model
                 model_path = path_save / pathlib.Path(args.data_path).stem /'aux_topic_model'
                 if model_path.exists():
-                    logger.info(f"-- -- Auxiliary topic model already exists at {model_path}. Deleting...")
-                    shutil.rmtree(model_path)
+                    logger.info(f"-- -- Auxiliary topic model already exists at {model_path}. Using it...")
+                else:
+                    model_path.mkdir(parents=True)
+                    logger.info(f"-- -- Training auxiliary topic model...")
 
-                model_path.mkdir(parents=True)
-                logger.info(f"-- -- Training auxiliary topic model...")
+                    this_args = argparse.Namespace(
+                        **{k: v for k, v in vars(args).items() 
+                        if v is not None and k in ["further_proc", "sample", "num_iters"]})
 
-                this_args = argparse.Namespace(
-                    **{k: v for k, v in vars(args).items() 
-                    if v is not None and k in ["further_proc", "sample", "num_iters"]})
-
-                # Assign new values to the copied Namespace object
-                this_args.model_path = model_path.as_posix()
-                this_args.load_data_path = load_data_path.as_posix()
-                this_args.num_topics = config['equiv']['num_topics']
-                this_args.logger = logger
-                                
-                model = train_model(
-                    model_path = model_path.as_posix(),
-                    model_type = config['equiv']['model_type'],
-                    num_topics = config['equiv']['num_topics'],
-                    further_proc = config['equiv']['further_proc'],
-                    logger = logger,
-                    env = pathlib.Path(config['llm']['env']),
-                    args = this_args
-                )
-                topics = model.print_topics()
-                print(f"-- -- Topics from auxiliary trained model: {topics}")
-                for i, topic in enumerate(topics):
-                    print("Topic #", i)
-                    print(topics[topic])
+                    # Assign new values to the copied Namespace object
+                    this_args.model_path = model_path.as_posix()
+                    this_args.load_data_path = load_data_path.as_posix()
+                    this_args.num_topics = config['equiv']['num_topics']
+                    this_args.logger = logger
+                                    
+                    model = train_model(
+                        model_path = model_path.as_posix(),
+                        model_type = config['equiv']['model_type'],
+                        num_topics = config['equiv']['num_topics'],
+                        further_proc = config['equiv']['further_proc'],
+                        logger = logger,
+                        env = pathlib.Path(config['llm']['env']),
+                        args = this_args
+                    )
+                    topics = model.print_topics()
+                    print(f"-- -- Topics from auxiliary trained model: {topics}")
+                    for i, topic in enumerate(topics):
+                        print("Topic #", i)
+                        print(topics[topic])
                 
                 path_to_source = model_path / f"{config['equiv']['model_type']}_{config['equiv']['num_topics']}" / "vocabulary.txt" if args.source_eq == "vocabulary" else model_path / f"{config['equiv']['model_type']}_{config['equiv']['num_topics']}"
-        
-                logger.info(f"-- -- Generating equivalences from {args.source_eq}...")
+                
+                logger.info(f"-- -- Generating equivalences from vocabulary...")
                 eq_generator.generate_equivalences(
                     source = args.source_eq,
                     path_to_source = path_to_source,
-                    path_save = this_path_save_eqs,
+                    path_save = path_save_eqs,
                     model_type = config['equiv']['model_type'],
                     language = config['equiv']['language'],
                     top_k = config['equiv']['top_k'],
                 )
-        
+                
                 # Copy the generated file to output so it is not overwritten when multiple runs are executed
-                this_path_save_copy = path_save_copy.parent / f"{path_save_copy.stem}_{t+1}.json"
-                logger.info(f"-- -- Equivalences saved to {this_path_save_eqs}")
-                shutil.copy(this_path_save_eqs, this_path_save_copy)
+                shutil.copy(path_save_eqs, path_save_copy)
+                logger.info(f"-- -- Equivalences saved to {path_save_eqs}")
+            
+            elif args.source_eq == "tm":
+                
+                logger.info(f"-- -- Running equivalence detection for TM {args.times_equiv} times...")
+            
+                for t in range(args.times_equiv):
+                    
+                    this_path_save_eqs = path_save_eqs.parent / f"{path_save_eqs.stem}_{t+1}.json"
+                    
+                    logger.info(f"-- -- Running equivalence detection {t+1} out of {args.times_equiv}...")
+            
+                    # Train auxiliary topic model
+                    model_path = path_save / pathlib.Path(args.data_path).stem /'aux_topic_model'
+                    if model_path.exists():
+                        logger.info(f"-- -- Auxiliary topic model already exists at {model_path}. Deleting...")
+                        shutil.rmtree(model_path)
+
+                    model_path.mkdir(parents=True)
+                    logger.info(f"-- -- Training auxiliary topic model...")
+
+                    this_args = argparse.Namespace(
+                        **{k: v for k, v in vars(args).items() 
+                        if v is not None and k in ["further_proc", "sample", "num_iters"]})
+
+                    # Assign new values to the copied Namespace object
+                    this_args.model_path = model_path.as_posix()
+                    this_args.load_data_path = load_data_path.as_posix()
+                    this_args.num_topics = config['equiv']['num_topics']
+                    this_args.logger = logger
+                                    
+                    model = train_model(
+                        model_path = model_path.as_posix(),
+                        model_type = config['equiv']['model_type'],
+                        num_topics = config['equiv']['num_topics'],
+                        further_proc = config['equiv']['further_proc'],
+                        logger = logger,
+                        env = pathlib.Path(config['llm']['env']),
+                        args = this_args
+                    )
+                    topics = model.print_topics()
+                    print(f"-- -- Topics from auxiliary trained model: {topics}")
+                    for i, topic in enumerate(topics):
+                        print("Topic #", i)
+                        print(topics[topic])
+                    
+                    path_to_source = model_path / f"{config['equiv']['model_type']}_{config['equiv']['num_topics']}" / "vocabulary.txt" if args.source_eq == "vocabulary" else model_path / f"{config['equiv']['model_type']}_{config['equiv']['num_topics']}"
+            
+                    logger.info(f"-- -- Generating equivalences from {args.source_eq}...")
+                    eq_generator.generate_equivalences(
+                        source = args.source_eq,
+                        path_to_source = path_to_source,
+                        path_save = this_path_save_eqs,
+                        model_type = config['equiv']['model_type'],
+                        language = config['equiv']['language'],
+                        top_k = config['equiv']['top_k'],
+                    )
+            
+                    # Copy the generated file to output so it is not overwritten when multiple runs are executed
+                    this_path_save_copy = path_save_copy.parent / f"{path_save_copy.stem}_{t+1}.json"
+                    logger.info(f"-- -- Equivalences saved to {this_path_save_eqs}")
+                    shutil.copy(this_path_save_eqs, this_path_save_copy)
+            else:
+                logger.error(f"-- -- Source of equivalences not recognized. Please provide a valid source.")
+                return
         
         #**********************************************************************
         # 4. Training
