@@ -311,35 +311,34 @@ def main():
                 if model_path.exists():
                     logger.info(f"-- -- Auxiliary topic model already exists at {model_path}. Deleting...")
                     shutil.rmtree(model_path)
-                else:
-                    model_path.mkdir(parents=True)
-                    logger.info(f"-- -- Auxiliary topic model does not exist at {model_path}")
-                    logger.info(f"-- -- Training auxiliary topic model...")
 
-                    this_args = argparse.Namespace(
-                        **{k: v for k, v in vars(args).items() 
-                        if v is not None and k in ["further_proc", "sample", "num_iters"]})
+                model_path.mkdir(parents=True)
+                logger.info(f"-- -- Training auxiliary topic model...")
 
-                    # Assign new values to the copied Namespace object
-                    this_args.model_path = model_path.as_posix()
-                    this_args.load_data_path = load_data_path.as_posix()
-                    this_args.num_topics = config['equiv']['num_topics']
-                    this_args.logger = logger
-                                    
-                    model = train_model(
-                        model_path = model_path.as_posix(),
-                        model_type = config['equiv']['model_type'],
-                        num_topics = config['equiv']['num_topics'],
-                        further_proc = config['equiv']['further_proc'],
-                        logger = logger,
-                        env = pathlib.Path(config['llm']['env']),
-                        args = this_args
-                    )
-                    topics = model.print_topics()
-                    print(f"-- -- Topics from auxiliary trained model: {topics}")
-                    for i, topic in enumerate(topics):
-                        print("Topic #", i)
-                        print(topics[topic])
+                this_args = argparse.Namespace(
+                    **{k: v for k, v in vars(args).items() 
+                    if v is not None and k in ["further_proc", "sample", "num_iters"]})
+
+                # Assign new values to the copied Namespace object
+                this_args.model_path = model_path.as_posix()
+                this_args.load_data_path = load_data_path.as_posix()
+                this_args.num_topics = config['equiv']['num_topics']
+                this_args.logger = logger
+                                
+                model = train_model(
+                    model_path = model_path.as_posix(),
+                    model_type = config['equiv']['model_type'],
+                    num_topics = config['equiv']['num_topics'],
+                    further_proc = config['equiv']['further_proc'],
+                    logger = logger,
+                    env = pathlib.Path(config['llm']['env']),
+                    args = this_args
+                )
+                topics = model.print_topics()
+                print(f"-- -- Topics from auxiliary trained model: {topics}")
+                for i, topic in enumerate(topics):
+                    print("Topic #", i)
+                    print(topics[topic])
                 
                 path_to_source = model_path / f"{config['equiv']['model_type']}_{config['equiv']['num_topics']}" / "vocabulary.txt" if args.source_eq == "vocabulary" else model_path / f"{config['equiv']['model_type']}_{config['equiv']['num_topics']}"
         
@@ -355,8 +354,8 @@ def main():
         
                 # Copy the generated file to output so it is not overwritten when multiple runs are executed
                 this_path_save_copy = path_save_copy.parent / f"{path_save_copy.stem}_{t+1}.json"
-                logger.info(f"-- -- Equivalences saved to {path_save_eqs}")
-                shutil.copy(path_save_eqs, this_path_save_copy)
+                logger.info(f"-- -- Equivalences saved to {this_path_save_eqs}")
+                shutil.copy(this_path_save_eqs, this_path_save_copy)
         
         #**********************************************************************
         # 4. Training
