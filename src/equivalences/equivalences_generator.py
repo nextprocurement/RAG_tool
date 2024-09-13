@@ -17,10 +17,15 @@ import ast
 import itertools
 from sentence_transformers.util import cos_sim
 from dspy.datasets import Dataset
-from src.topicmodeling.topic_model import BERTopicModel, CtmModel, MalletLdaModel, TopicGPTModel
 from dspy.evaluate import Evaluate
-
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
 from src.utils.tm_utils import create_model
+from sklearn.metrics.pairwise import cosine_similarity
+from scipy.sparse import csr_matrix
+from collections import defaultdict
+from scipy.sparse.csgraph import connected_components
+from sklearn.metrics import silhouette_score
 
 
 #######################################################################
@@ -342,7 +347,7 @@ class HermesEquivalencesGenerator(object):
         # Count number of clusters (excluding noise labeled as -1)
         n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
         n_noise = list(labels).count(-1)
-
+        
         self._logger.info(f'-- -- Number of clusters: {n_clusters}')
         print(f'-- -- Number of noise points: {n_noise}')
         print(f'-- -- Labels: {set(labels)}')
@@ -372,6 +377,36 @@ class HermesEquivalencesGenerator(object):
         embedding_dict = {word: embedding for word, embedding in zip(word_list, embeddings)}
         
         return embedding_dict
+    
+    def _perform_pca(self, data, variance_threshold=0.9):
+        """
+        Performs PCA on the given data and retains components that explain the desired variance.
+
+        Parameters:
+        - data: numpy array of shape (N, M), where N is the number of samples and M is the number of features.
+        - variance_threshold: float between 0 and 1 indicating the cumulative variance to retain.
+
+        Returns:
+        - reduced_data: Transformed data with reduced dimensions.
+        - n_components: Number of principal components retained.
+        - explained_variance_ratio: Explained variance ratio of the retained components.
+        """
+        # Standardize the data to have mean=0 and variance=1
+        scaler = StandardScaler()
+        X_std = scaler.fit_transform(data)
+
+        # Perform PCA to retain components that explain the desired variance
+        pca = PCA(n_components=variance_threshold)
+        reduced_data = pca.fit_transform(X_std)
+        n_components = pca.n_components_
+        explained_variance_ratio = pca.explained_variance_ratio_
+
+        # Print the results
+        print(f"Number of components to retain {variance_threshold * 100}% variance: {n_components}")
+        print(f"Explained variance ratio of retained components: {explained_variance_ratio}")
+        print(f"Cumulative explained variance: {np.cumsum(explained_variance_ratio)}")
+
+        return reduced_data, n_components, explained_variance_ratio
 
     def _get_words_by_cluster(
         self,
@@ -414,6 +449,65 @@ class HermesEquivalencesGenerator(object):
                 cluster_to_words[cluster_id].append(word)  # Append word to the corresponding cluster
         
         return cluster_to_words
+    
+    def _get_words_by_cluster_sim(
+        self,
+        embeddings: np.ndarray,
+        words: List[str],
+        thr=0.85,
+    ):  
+        
+        # Perform PCA on the embeddings
+        embeddings_X = self._perform_pca(embeddings)
+        
+        # Normalize embeddings
+        embeddings = embeddings_X / np.linalg.norm(embeddings_X, axis=1)[:, np.newaxis]
+        
+        # Calculate cosine similarity matrix
+        similarity_matrix = cosine_similarity(embeddings)
+
+        thresholds = np.linspace(0.1, 0.9, 9)
+        print(f'Calculating connected components for different thresholds: {thresholds}....')
+        results = []
+        for threshold in thresholds:
+            adjacency_matrix = similarity_matrix > threshold
+            np.fill_diagonal(adjacency_matrix, False)
+            adjacency_csr = csr_matrix(adjacency_matrix)
+            n_components, labels = connected_components(adjacency_csr)
+            
+            # Map words to clusters
+            cluster_to_words = defaultdict(list)
+            for word, label in zip(words, labels):
+                cluster_to_words[label].append(word)
+
+            # Filter to keep only clusters with more than one word
+            reduced_cluster_to_words = {label: words for label, words in cluster_to_words.items() if len(words) > 1}
+            
+            # Optional: count how many clusters have more than one word
+            n_components_more = len(reduced_cluster_to_words)
+            
+            word_groups = list(cluster_to_words.values())
+            results.append((threshold, n_components, len(word_groups)))
+            print(f'Threshold: {threshold:.2f}, Components: {n_components}, Word Groups: {len(word_groups)}, n_components_more: {n_components_more}')
+        
+        adjacency_matrix = similarity_matrix > thr
+        np.fill_diagonal(adjacency_matrix, False)
+        adjacency_csr = csr_matrix(adjacency_matrix)
+        n_components, labels = connected_components(adjacency_csr)
+        
+        if len(set(labels)) > 1:
+            score = silhouette_score(embeddings, labels, metric='cosine')
+            print(f'Silhouette Score: {score:.4f}')
+        else:
+            print("Silhouette Score: No se puede calcular con solo un cluster.")
+        
+        # Map words to clusters
+        cluster_to_words = defaultdict(list)
+        for word, label in zip(words, labels):
+            cluster_to_words[label].append(word)
+        reduced_cluster_to_words = [words for label, words in cluster_to_words.items() if len(words) > 1]
+        
+        return reduced_cluster_to_words
 
     def _train_module(
         self,
@@ -598,10 +692,8 @@ class HermesEquivalencesGenerator(object):
 
             model = create_model(model_type, **params_inference)
             topics = model.print_topics(top_k=top_k)
-
-            #for i, topic in enumerate(topics):
-            #    print("Topic #", i)
-            #    print(topics[topic])
+            # keep top-k words from each topic
+            topics = {k: v[:top_k] for k, v in topics.items() if len(v) > 0}
 
             all_words = list(set(list(itertools.chain(*topics.values()))))
         
@@ -612,12 +704,11 @@ class HermesEquivalencesGenerator(object):
         word_embeddings = self._get_embeddings(all_words)
         words = list(word_embeddings.keys())
         embeddings = np.array(list(word_embeddings.values()))
-        labels = self._get_clusters(embeddings)
-        cluster_to_words = self._get_words_by_cluster(labels, words)
+        #labels = self._get_clusters(embeddings)
+        #cluster_to_words = self._get_words_by_cluster(labels, words)
+        # word_groups = [cluster_to_words[el] for el in cluster_to_words ]
+        word_groups = self._get_words_by_cluster_sim(embeddings, words)
         
-        word_groups = [cluster_to_words[el] for el in cluster_to_words ]
-        i = len(words)
-
         ######################################################################### Generate equivalences
         ########################################################################
         time_start = time.time()

@@ -34,7 +34,7 @@ def main():
         "--model_1_path", # Optimized
         help="Path to the first model",
         required=False,
-        default="/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/out_no_filter/optimized/4.training/datos_modelo_es_Mallet_df_merged_14_topics_45_ENTREGABLE/MalletLda_14"
+        default="/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/out_no_filter_tfidf/optimized/4.training/datos_modelo_es_Mallet_df_merged_14_topics_45_ENTREGABLE/MalletLda_14"
     )
     parser.add_argument(
         "--model_2_path", # Non-optimized
@@ -107,6 +107,7 @@ def main():
         print("-- -- Non-optimized model topic:", match[1][1], models_topics[1][match[1][1]])
         print("-+-"*20)
     """
+    import pdb; pdb.set_trace()
     matches = tm_matcher.one_to_one_matching(models_topics[0],models_topics[1],len(models_topics[0]))
     
 

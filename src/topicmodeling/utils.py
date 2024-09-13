@@ -103,6 +103,8 @@ def tkz_clean_str(
         """
 
         eq_files = pathlib.Path(eqs_path).rglob('*')
+        if eq_files == []:
+            return {}
         equivalent = {}
         for eqFile in eq_files:
             with eqFile.open('r', encoding='utf8') as fin:

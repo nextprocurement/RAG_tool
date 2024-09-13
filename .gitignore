@@ -206,3 +206,7 @@ data/out
 data/out2
 data/out_pliegos
 data/out_no_filter
+.venv_llom
+data/out_no_filter_tfidf
+data/out_pliegos_all
+dbscan.ipynb
