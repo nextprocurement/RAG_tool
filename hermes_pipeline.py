@@ -90,7 +90,7 @@ def main():
     parser.add_argument(
         "--times_equiv",
         action='store_true',
-        default=1,
+        default=3,
         help="Number of times to run the equivalence detection"
     )
         
@@ -100,7 +100,7 @@ def main():
     parser.add_argument(
         "--num_topics",
         help="Number of topics",
-        type=int, default=14, required=False)
+        type=str, default="14,15,25,30,50", required=False)
     parser.add_argument(
         "--num_iters",
         help="Number of iterations",
@@ -126,7 +126,7 @@ def main():
         "--further_proc",
         help="Whether to further process the data.",
         type=bool, 
-        default=False
+        default=True
     )
     
     # ***********************************************************************
@@ -366,32 +366,32 @@ def main():
                     model_path.mkdir(parents=True)
                     logger.info(f"-- -- Training auxiliary topic model for TM {t+1}...")
 
-                this_args = argparse.Namespace(
-                    **{k: v for k, v in vars(args).items() 
-                    if v is not None and k in ["further_proc", "sample", "num_iters"]})
+                    this_args = argparse.Namespace(
+                        **{k: v for k, v in vars(args).items() 
+                        if v is not None and k in ["further_proc", "sample", "num_iters"]})
 
-                # Assign new values to the copied Namespace object
-                this_args.model_path = model_path.as_posix()
-                this_args.load_data_path = load_data_path.as_posix()
-                this_args.num_topics = config['equiv']['num_topics']
-                this_args.logger = logger
-                                
-                model = train_model(
-                    model_path = model_path.as_posix(),
-                    model_type = config['equiv']['model_type'],
-                    num_topics = config['equiv']['num_topics'],
-                    further_proc = config['equiv']['further_proc'],
-                    logger = logger,
-                    env = pathlib.Path(config['llm']['env']),
-                    args = this_args,
-                    stw_path = path_root_save / "stops",
-                    eq_path = path_save_eqs_file
-                )
-                topics = model.print_topics()
-                print(f"-- -- Topics from auxiliary trained model: {topics}")
-                for i, topic in enumerate(topics):
-                    print("Topic #", i)
-                    print(topics[topic])
+                    # Assign new values to the copied Namespace object
+                    this_args.model_path = model_path.as_posix()
+                    this_args.load_data_path = load_data_path.as_posix()
+                    this_args.num_topics = config['equiv']['num_topics']
+                    this_args.logger = logger
+                                    
+                    model = train_model(
+                        model_path = model_path.as_posix(),
+                        model_type = config['equiv']['model_type'],
+                        num_topics = config['equiv']['num_topics'],
+                        further_proc = config['equiv']['further_proc'],
+                        logger = logger,
+                        env = pathlib.Path(config['llm']['env']),
+                        args = this_args,
+                        stw_path = path_root_save / "stops",
+                        eq_path = path_save_eqs
+                    )
+                    topics = model.print_topics()
+                    print(f"-- -- Topics from auxiliary trained model: {topics}")
+                    for i, topic in enumerate(topics):
+                        print("Topic #", i)
+                        print(topics[topic])
                 
                 path_to_source = model_path / f"{config['equiv']['model_type']}_{config['equiv']['num_topics']}" / "vocabulary.txt" if args.source_eq == "vocabulary" else model_path / f"{config['equiv']['model_type']}_{config['equiv']['num_topics']}"
         
@@ -422,15 +422,16 @@ def main():
             path_save.mkdir(parents=True)
             
         model_path = path_save / pathlib.Path(args.data_path).stem
-        if not model_path_complete.exists():
+        if not model_path.exists():
             model_path.mkdir(parents=True)
             logger.info(f"-- --Creating {model_path.as_posix()} ...")       
      
         try:
             num_topics_lst = args.num_topics.split(",")
+            num_topics_lst = [int(num) for num in num_topics_lst]
         except Exception as e:
             logger.info(f"-- -- Error splitting num_topics: {str(e)}. Number of topics is not a list.")
-            num_topics_lst = [args.num_topics]
+            num_topics_lst = [int(args.num_topics)]
         
         for num_topics in num_topics_lst:
             this_args = argparse.Namespace(
@@ -457,7 +458,6 @@ def main():
                 if model_path_complete.exists():
                     logger.info(f"-- -- Model output already exists at {model_path_complete}")
                 else:
-                    model_path.mkdir(parents=True)
                     logger.info(f"-- -- Model output does not exist at {model_path}. Training model...")
                 
                     if model_type == 'Ctm':
@@ -475,7 +475,7 @@ def main():
                         env = pathlib.Path(config['llm']['env']),
                         args = this_args,
                         stw_path = path_root_save / "stops",
-                        eq_path = path_save_eqs_file
+                        eq_path = path_save_eqs
                     )
                     topics = model.print_topics()
                     print(f"-- -- Topics from auxiliary trained model: {topics}")
@@ -554,9 +554,10 @@ def main():
      
         try:
             num_topics_lst = args.num_topics.split(",")
+            num_topics_lst = [int(num) for num in num_topics_lst]
         except Exception as e:
             logger.info(f"-- -- Error splitting num_topics: {str(e)}. Number of topics is not a list.")
-            num_topics_lst = [args.num_topics]
+            num_topics_lst = [int(args.num_topics)]
         
         for num_topics in num_topics_lst:
             

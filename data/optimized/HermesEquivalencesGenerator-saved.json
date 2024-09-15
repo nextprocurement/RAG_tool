@@ -6,6 +6,20 @@
     "demos": [
       {
         "augmented": true,
+        "WORDS": "['ampliaci\u00f3', 'ampliacion']",
+        "LANGUAGE": "spanish",
+        "rationale": "produce the MAPPED_WORDS. We...",
+        "MAPPED_WORDS": "[{'ampliaci\u00f3n': 'ampliaci\u00f3'}]"
+      },
+      {
+        "augmented": true,
+        "WORDS": "['alto', 'alta', 'altas']",
+        "LANGUAGE": "spanish",
+        "rationale": "produce the MAPPED_WORDS. We...",
+        "MAPPED_WORDS": "[{'alto': 'alto, alta, altas'}]"
+      },
+      {
+        "augmented": true,
         "WORDS": "['cuarto', 'habitaci\u00f3n']",
         "LANGUAGE": "spanish",
         "rationale": "produce the MAPPED_WORDS. We...",
@@ -13,24 +27,10 @@
       },
       {
         "augmented": true,
-        "WORDS": "['estructural', 'estructura']",
+        "WORDS": "['medioambiental', 'ambiental']",
         "LANGUAGE": "spanish",
         "rationale": "produce the MAPPED_WORDS. We...",
-        "MAPPED_WORDS": "[{'estructura': 'estructural'}]"
-      },
-      {
-        "augmented": true,
-        "WORDS": "['escuelas', 'escolar', 'colegio', 'escuela']",
-        "LANGUAGE": "spanish",
-        "rationale": "produce the MAPPED_WORDS. We...",
-        "MAPPED_WORDS": "[{'escuela': 'escuelas'}, {'escuela': 'escolar'}, {'escuela': 'colegio'}, {'escuela': 'escuela'}]"
-      },
-      {
-        "augmented": true,
-        "WORDS": "['demolici\u00f3n_edificaci\u00f3n', 'demolici\u00f3n_infravivienda', 'demolici\u00f3n_parcial']",
-        "LANGUAGE": "spanish",
-        "rationale": "produce the MAPPED_WORDS. We...",
-        "MAPPED_WORDS": "[{'demolici\u00f3n': 'demolici\u00f3n_edificaci\u00f3n'}, {'demolici\u00f3n': 'demolici\u00f3n_infravivienda'}, {'demolici\u00f3n': 'demolici\u00f3n_parcial'}]"
+        "MAPPED_WORDS": "[{'medioambiental': 'ambiental'}]"
       },
       {
         "words": "['estrategia_desarrollo', 'estrategias_desarrollo']",
@@ -45,45 +45,45 @@
         "equivalences": "[{'junta': 'junta_castilla, junta_andaluc\u00eda'}]"
       },
       {
-        "words": "['comunidad_regantes', 'comunidad_valenciana']",
-        "equivalences": "[]"
+        "words": "['plan', 'planos']",
+        "equivalences": "[{'plan': 'planos'}]"
       },
       {
         "words": "['externo', 'exterior']",
         "equivalences": "[{'exterior': 'exterior'}]"
       },
       {
-        "words": "['patolog\u00eda', 'patolog\u00edas']",
-        "equivalences": "[{'patolog\u00eda': 'patolog\u00edas'}]"
+        "words": "['estructural', 'estructura']",
+        "equivalences": "[{'estructura': 'estructural'}]"
       },
       {
         "words": "['energ\u00e9tica_alumbrado', 'energ\u00e9tico_alumbrado', 'energ\u00eda_limpio']",
         "equivalences": "[{'alumbrado': 'energ\u00e9tica_alumbrado, energ\u00e9tico_alumbrado'}]"
       },
       {
-        "words": "['burgos', 'villar']",
-        "equivalences": "[]"
+        "words": "['p\u00fablico', 'p\u00fablica', 'p\u00fablicos', 'p\u00fablicas', 'publico']",
+        "equivalences": "[{'p\u00fablico': 'p\u00fablica', 'p\u00fablicos', 'p\u00fablicas', 'publico'}]"
       },
       {
         "words": "['edificio', 'edifici']",
         "equivalences": "[{'edificio': 'edifici'}]"
       },
       {
-        "words": "['abad', 'siglo']",
-        "equivalences": "[]"
+        "words": "['cristal', 'cristaler\u00eda']",
+        "equivalences": "[{'cristal': 'cristaler\u00eda'}]"
       },
       {
         "words": "['barranco', 'barranc']",
         "equivalences": "[{'barranco': 'barranc'}]"
       },
       {
-        "words": "['medioambiental', 'ambiental']",
-        "equivalences": "[{'medioambiental': 'ambiental'}]"
+        "words": "['corregir', 'correctivo']",
+        "equivalences": "[{'corregir': 'correctivo'}]"
       }
     ],
-    "signature_instructions": "\n    Map similar terms to a common form in LANGUAGE, considering lemmatization errors, synonyms, and spelling variations. Return [] if no equivalences are found.\n    \n    ----------------------------------------------------------------------------\n    Examples\n    --------\n    WORDS: [\"calefacci\u00f3\", \"calor\"]\t\t\n    MAPPED_WORDS: [{\"calefacci\u00f3n\": calefacci\u00f3}]\n    ----------------------------------------------------------------------------\n\n    Important: The final word must be a single word or multiple words in LANGUAGE joined by an underscore ('_'). \n    Use the simplest form, e.g., choose \"digital\" over \"digitales\" and a single word over a compound word, e.g., \"proyecto\" over \"proyecto_b\u00e1sico\". \n    If it applies, the final word should be a noun over an adverb, adjective or verb.\n    ",
+    "signature_instructions": "\n    Map similar terms to a common form in LANGUAGE, considering lemmatization errors, synonyms, and spelling variations. Return [] if no equivalences are found.\n    \n    ----------------------------------------------------------------------------\n    Examples\n    --------\n    WORDS: [\"calefacci\u00f3\", \"calor\"]\t\t\n    MAPPED_WORDS: [{\"calefacci\u00f3n\": calefacci\u00f3}]\n    \n    WORDS: [\"vivienda_protegida\", \"vivienda\", \"viviendas_protegidas\"]\n    MAPPED_WORDS: [{\"vivienda_protegida\": \"viviendas_protegidas\"}]\n    \n    WORDS: [\"expte\", \"expdte\"]\n    MAPPED_WORDS: [{\"vivienda_protegida\": \"expdte, expte\"}]\n    ----------------------------------------------------------------------------\n\n    Important: The final word must be a single word or multiple words in LANGUAGE joined by an underscore ('_'). \n    Use the simplest form, e.g., choose \"digital\" over \"digitales\", and verbs in the infinitive form over other forms.\n    Do not loose specific information, e.g., \"vivienda_protegida\" should not be mapped to \"vivienda\", since it is a specific type of housing.\n    If it applies, the final word should be a noun over an adverb, adjective or verb. \n    If you are present with acronyms or abbreviations, map them to the full form.\n    ",
     "signature_prefix": "MAPPED WORDS:",
-    "extended_signature_instructions": "\n    Map similar terms to a common form in LANGUAGE, considering lemmatization errors, synonyms, and spelling variations. Return [] if no equivalences are found.\n    \n    ----------------------------------------------------------------------------\n    Examples\n    --------\n    WORDS: [\"calefacci\u00f3\", \"calor\"]\t\t\n    MAPPED_WORDS: [{\"calefacci\u00f3n\": calefacci\u00f3}]\n    ----------------------------------------------------------------------------\n\n    Important: The final word must be a single word or multiple words in LANGUAGE joined by an underscore ('_'). \n    Use the simplest form, e.g., choose \"digital\" over \"digitales\" and a single word over a compound word, e.g., \"proyecto\" over \"proyecto_b\u00e1sico\". \n    If it applies, the final word should be a noun over an adverb, adjective or verb.\n    ",
+    "extended_signature_instructions": "\n    Map similar terms to a common form in LANGUAGE, considering lemmatization errors, synonyms, and spelling variations. Return [] if no equivalences are found.\n    \n    ----------------------------------------------------------------------------\n    Examples\n    --------\n    WORDS: [\"calefacci\u00f3\", \"calor\"]\t\t\n    MAPPED_WORDS: [{\"calefacci\u00f3n\": calefacci\u00f3}]\n    \n    WORDS: [\"vivienda_protegida\", \"vivienda\", \"viviendas_protegidas\"]\n    MAPPED_WORDS: [{\"vivienda_protegida\": \"viviendas_protegidas\"}]\n    \n    WORDS: [\"expte\", \"expdte\"]\n    MAPPED_WORDS: [{\"vivienda_protegida\": \"expdte, expte\"}]\n    ----------------------------------------------------------------------------\n\n    Important: The final word must be a single word or multiple words in LANGUAGE joined by an underscore ('_'). \n    Use the simplest form, e.g., choose \"digital\" over \"digitales\", and verbs in the infinitive form over other forms.\n    Do not loose specific information, e.g., \"vivienda_protegida\" should not be mapped to \"vivienda\", since it is a specific type of housing.\n    If it applies, the final word should be a noun over an adverb, adjective or verb. \n    If you are present with acronyms or abbreviations, map them to the full form.\n    ",
     "extended_signature_prefix": "MAPPED WORDS:"
   }
 }

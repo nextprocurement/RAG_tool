@@ -14,7 +14,9 @@ from src.utils.tm_utils import create_model
 from src.evaluation.tm_matcher import TMMatcher
 from src.utils.utils import init_logger
 import pandas as pd
+from sentence_transformers import SentenceTransformer
 import glob
+from sklearn.metrics.pairwise import cosine_similarity
 
 def load_config(config_path):
     """
@@ -34,13 +36,13 @@ def main():
         "--model_1_path", # Optimized
         help="Path to the first model",
         required=False,
-        default="/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/out_no_filter_tfidf/optimized/4.training/datos_modelo_es_Mallet_df_merged_14_topics_45_ENTREGABLE/MalletLda_14"
+        default="/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/out/optimized/4.training/datos_modelo_es_Mallet_df_merged_14_topics_45_ENTREGABLE/MalletLda_14"
     )
     parser.add_argument(
         "--model_2_path", # Non-optimized
         help="Path to the second model",
         required=False,
-        default="/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/out_no_filter/non_optimized/4.training/datos_modelo_es_Mallet_df_merged_14_topics_45_ENTREGABLE/MalletLda_14"
+        default="/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/out/non_optimized/4.training/datos_modelo_es_Mallet_df_merged_14_topics_45_ENTREGABLE/MalletLda_14"
     )
     parser.add_argument(
         "--id_fld",
@@ -92,13 +94,14 @@ def main():
         else: # Non-optimized
             tfidf = False
         topics = model.print_topics(tfidf=tfidf)
-        topics = [topics[topic] for topic in topics]
+        topics = [topics[topic][:15] for topic in topics]
         
         models_topics.append(topics)
         models_betas.append(model.get_betas())
         models_thetas.append(model.get_thetas())
         models_vocabs.append(model.vocab)
-        
+    
+    import pdb; pdb.set_trace()
     tm_matcher = TMMatcher()
     #matches = tm_matcher.iterative_matching(models_topics, 5)#len(models_topics[0]))
     """
@@ -107,9 +110,7 @@ def main():
         print("-- -- Non-optimized model topic:", match[1][1], models_topics[1][match[1][1]])
         print("-+-"*20)
     """
-    import pdb; pdb.set_trace()
     matches = tm_matcher.one_to_one_matching(models_topics[0],models_topics[1],len(models_topics[0]))
-    
 
     print("** Matches found:")
     for match in matches:
@@ -269,20 +270,22 @@ def main():
     all_info = []
     for match in matches:
         
-        match_0 = match[0][1]
+        match_0 = match[0]
         match_0_tpc_desc = models_topics[0][match_0]
         match_0_tpc_label = models_labels[0][match_0]
         
-        match_1 = match[1][1]
+        match_1 = match[1]
         match_1_tpc_desc = models_topics[1][match_1]
         match_1_tpc_label = models_labels[1][match_1]
         
         # Get the most representative document for each topic based on the retriever
         top_docs_retr = hermes_index.retrieve(match_0_tpc_label, 3)
+        top_docs_retr = [el['original_document'] for el in top_docs_retr]
         most_repr_optim_s3 = [models_most_repr[0].iloc[match_0]["S3 most representative document #1"], models_most_repr[0].iloc[match_0]["S3 most representative document #2"], models_most_repr[0].iloc[match_0]["S3 most representative document #3"]]
         most_repr_optim_thetas = [models_most_repr[0].iloc[match_0]["thetas most representative document #1"], models_most_repr[0].iloc[match_0]["thetas most representative document #2"], models_most_repr[0].iloc[match_0]["thetas most representative document #3"]]
         
         top_docs_retr_1 = hermes_index.retrieve(match_1_tpc_label, 3)
+        top_docs_retr_1 = [el['original_document'] for el in top_docs_retr_1]
         most_repr_non_optim_s3 = [models_most_repr[1].iloc[match_1]["S3 most representative document #1"], models_most_repr[1].iloc[match_1]["S3 most representative document #2"], models_most_repr[1].iloc[match_1]["S3 most representative document #3"]]
         most_repr_non_optim_thetas = [models_most_repr[1].iloc[match_1]["thetas most representative document #1"], models_most_repr[1].iloc[match_1]["thetas most representative document #2"], models_most_repr[1].iloc[match_1]["thetas most representative document #3"]]
         
@@ -320,9 +323,64 @@ def main():
             "Most representative docs Non-optimized Thetas"
         ]
     )
+
+    # Initialize the pre-trained Sentence Transformer model
+    model = SentenceTransformer('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')
+
+    def average_cosine_similarity_embeddings(docs1, docs2):
+        """
+        Compute the average cosine similarity between two lists of documents using embeddings.
+
+        Parameters:
+        - docs1: List of documents (strings) from the first column.
+        - docs2: List of documents (strings) from the second column.
+
+        Returns:
+        - avg_similarity: The average cosine similarity between the documents.
+        """
+        # Ensure that the lists are not empty and have the same length
+        if not docs1 or not docs2 or len(docs1) != len(docs2):
+            return None
+
+        # Compute embeddings for both lists of documents
+        embeddings1 = model.encode(docs1)
+        embeddings2 = model.encode(docs2)
+
+        # Compute cosine similarities between corresponding documents
+        similarities = []
+        for emb1, emb2 in zip(embeddings1, embeddings2):
+            cos_sim = cosine_similarity([emb1], [emb2])[0][0]
+            similarities.append(cos_sim)
+
+        # Compute the average similarity
+        avg_similarity = sum(similarities) / len(similarities)
+        return avg_similarity
+
+    # Define the pairs of columns you want to compare
+    pairs = [
+        ('Top Docs Optimized', 'Most representative docs Optimized S3'),
+        ('Top Docs Optimized', 'Most representative docs Optimized Thetas'),
+        ('Top Docs Non-optimized', 'Most representative docs Non-optimized S3'),
+        ('Top Docs Non-optimized', 'Most representative docs Non-optimized Thetas')
+    ]
+
+    # Compute average cosine similarities and add them as new columns
+    for col1, col2 in pairs:
+        similarities = []
+        for idx, row in df_results.iterrows():
+            docs1 = row[col1]
+            docs2 = row[col2]
+            avg_sim = average_cosine_similarity_embeddings(docs1, docs2)
+            similarities.append(avg_sim)
+        # Add the results to the DataFrame
+        df_results[f'Avg Cosine Similarity between {col1} and {col2}'] = similarities
+
+    # Now, df contains the new columns with the average cosine similarities
+    print(df_results.head())
     
     df_results.to_excel("results.xlsx")
-
+    
+    import pdb; pdb.set_trace()
     
 if __name__ == "__main__":
    main() 

@@ -199,7 +199,7 @@ class TopicModel(ABC):
             self._logger.info(f"-- -- Applying further processing to the data")
             df['lemmas'] = df['lemmas'].apply(lambda row: tkz_clean_str(row, stops_path, eqs_path))
             self._logger.info(f"-- -- Further processing done in {(time.time() - start_time) / 60} minutes. Saving to {preproc_file}")
-        
+                    
         # filter words with less than 3 characters
         self._logger.info(f"-- -- Filtering out words with less than 3 characters")
         df["lemmas"] = df['lemmas'].apply(lambda x: ' '.join([el for el in x.split() if len(el) > 3]))  # remove short words
