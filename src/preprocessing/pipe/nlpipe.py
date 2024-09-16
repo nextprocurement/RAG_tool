@@ -45,7 +45,7 @@ def main():
     parser.add_argument('--do_embeddings', default=False, required=False,
                         action='store_true', help="Flag to activate embeddings calculation")
     parser.add_argument("--embeddings_model", type=str,
-                        default="all-mpnet-base-v2", required=False,
+                        default="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2", required=False,
                         help="Model to be used for calculating the embeddings")
     parser.add_argument("--max_sequence_length", type=int, default=384,
                         required=False, help="Context of the model to be used for calculating the embeddings.")

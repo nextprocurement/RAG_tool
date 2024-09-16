@@ -179,9 +179,8 @@ class TransformOptim(dspy.Signature):
     ----------------------------------------------------------------------------
 
     Important: The final word must be a single word or multiple words in LANGUAGE joined by an underscore ('_'). 
-    Use the simplest form, e.g., choose "digital" over "digitales", and verbs in the infinitive form over other forms.
     Do not loose specific information, e.g., "vivienda_protegida" should not be mapped to "vivienda", since it is a specific type of housing.
-    If it applies, the final word should be a noun over an adverb, adjective or verb. 
+    If it applies, the final word should be a noun over an adverb, adjective or verb. If it is a noun, it should be singular, and if it is a verb, it should be in the infinitive form.
     If you are present with acronyms or abbreviations, map them to the full form.
     """
     # and a single word over a compound word, e.g., "proyecto" over "proyecto_básico"
@@ -193,6 +192,7 @@ class TransformModule(dspy.Module):
     def __init__(
         self,
         optim: bool = False,
+        lang: str = "spanish"
     ):  
         """
         Initialize the TransformModule, which maps similar terms to a common form in LANGUAGE, considering lemmatization errors, synonyms, and spelling variations.
@@ -210,7 +210,10 @@ class TransformModule(dspy.Module):
             self.transform = dspy.ChainOfThought(TransformNotOptim)
         self.roman_numeral_pattern = r'_(M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3}))$'
 
-        self._nlp_model = load_spacy("es_core_news_md")
+        if lang == "es":
+            self._nlp_model = load_spacy("es_core_news_md")
+        else:
+            self._nlp_model = load_spacy("en_core_web_md")
         self._trf_model = SentenceTransformer("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
 
 
@@ -256,14 +259,17 @@ class TransformModule(dspy.Module):
                     key, val, new_key, eq_dict, word_embeddings, thr_similarity
                 )
 
-            if eq_dict[new_key]:
-                # check if there are repeated values. If so, count them
-                repeated_values = [item for item in eq_dict[new_key] if eq_dict[new_key].count(item) > 1]
-                
-                if repeated_values and len(repeated_values) > 1:
-                    eq_dict[new_key] = list(set(eq_dict[new_key]))# keep only unique values
-                
-                final_equivalences.append(eq_dict)
+            try:
+                if eq_dict[new_key]:
+                    # check if there are repeated values. If so, count them
+                    repeated_values = [item for item in eq_dict[new_key] if eq_dict[new_key].count(item) > 1]
+                    
+                    if repeated_values and len(repeated_values) > 1:
+                        eq_dict[new_key] = list(set(eq_dict[new_key]))# keep only unique values
+                    
+                    final_equivalences.append(eq_dict)
+            except KeyError as e:
+                print(f"KeyError: {e}")
 
         return final_equivalences
 
@@ -330,7 +336,7 @@ class TransformModule(dspy.Module):
         if len(key_split) > 1 and len(val_split) > 1:
             # Check if the suffixes are proper nouns
             if self._are_proper_nouns(key_split[1], val_split[1]):
-                import pdb; pdb.set_trace()
+                #import pdb; pdb.set_trace()
                 base_key = key_split[0]
                 eq_dict.setdefault(base_key, []).extend([key_split[1], val_split[1]])
                 print(f"'{key_split[1]}' and '{val_split[1]}' are proper nouns. Mapping to '{base_key}'")
@@ -435,6 +441,7 @@ class HermesEquivalencesGenerator(object):
         trained_promt: str = pathlib.Path(
             __file__).parent.parent.parent / "data/optimized/HermesEquivalencesGenerator-saved.json",
         trf_model: str = 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2',
+        lang = "es",
         logger: logging.Logger = None,
         path_logs: pathlib.Path = pathlib.Path(
             __file__).parent.parent.parent / "data/logs"
@@ -468,7 +475,10 @@ class HermesEquivalencesGenerator(object):
         
         self._logger = logging.getLogger(__name__)
         self._model = SentenceTransformer(trf_model)
-        self._nlp_model = load_spacy("es_core_news_md")
+        if lang == "es":
+            self._nlp_model = load_spacy("es_core_news_md")
+        else:
+            self._nlp_model = load_spacy("en_core_web_md")
         self._corrector = CorrectorModule()
         
         # Dspy settings
@@ -483,12 +493,12 @@ class HermesEquivalencesGenerator(object):
         dspy.settings.configure(lm=self.lm)
         
         if not use_optimized:
-            self.module = TransformModule(optim=False)
+            self.module = TransformModule(optim=False, lang=lang)
         elif use_optimized and not do_train:
             if not pathlib.Path(trained_promt).exists():
                 self._logger.error("-- -- Trained prompt not found. Exiting.")
                 return
-            self.module = TransformModule(optim=True)
+            self.module = TransformModule(optim=True, lang=lang)
             self.module.load(trained_promt)
             self._logger.info(f"-- -- TransformModule loaded from {trained_promt}")
         else:
@@ -679,7 +689,7 @@ class HermesEquivalencesGenerator(object):
                 print(f'Davies-Bouldin Index: {dbi:.2f}')
             else:
                 score = -1
-                db = -1
+                dbi = -1
                 print("Silhouette Score: No se puede calcular con solo un cluster.")
             print(f'Threshold: {threshold:.2f}, Components: {n_components}, Word Groups: {len(word_groups)}, n_components_more: {n_components_more}, Silhouette Score: {score:.4f}')
             self._logger.info(f'Threshold: {threshold:.2f}, Components: {n_components}, Word Groups: {len(word_groups)}, n_components_more: {n_components_more}, Silhouette Score: {score:.4f}')
@@ -859,7 +869,7 @@ class HermesEquivalencesGenerator(object):
         source: str, # either "vocabulary" or "tm"
         path_to_source: str = None,
         model_type: str = "MalletLda",
-        language: str = "spanish",
+        language: str = "es",
         path_save: str = "/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/src/topicmodeling/data/equivalences/cpv45_equivalences_test_vocab.json",
         optim: bool = False,
         top_k: int = 100
@@ -913,6 +923,10 @@ class HermesEquivalencesGenerator(object):
         
         ######################################################################### Generate equivalences
         ########################################################################
+        if language == "es":
+            language = "spanish"
+        else:
+            language = "english"
         time_start = time.time()
         equivalences = []
         for el in word_groups:
@@ -923,19 +937,20 @@ class HermesEquivalencesGenerator(object):
         
         df = pd.DataFrame(equivalences, columns= ["origin", "equivalence"])
         
-        df.to_excel("/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/cpv45_equivalences_test.xlsx")
-
+        df.to_excel("/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/scholar_equivalences_test.xlsx")
+        
         # filter empty equivalences
         df = df[df['equivalence'].str.len() > 0]
         print(df.head())
-                
         # Loop through the dataframe to create the wordlist
         word_list = []
         for _, row in df.iterrows():
             for equivalence in row['equivalence']:
                 for key, values in equivalence.items():
                     for value in values:
-                        key = self._corrector(key)
+                        if language == "spanish":
+                            # correct the key
+                            key = self._corrector(key)
                         # if new key has spaces, replace them with underscores
                         key = key.replace(" ", "_")
                         if key != value:

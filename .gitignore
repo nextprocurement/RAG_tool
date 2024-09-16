@@ -210,3 +210,4 @@ data/out_no_filter
 data/out_no_filter_tfidf
 data/out_pliegos_all
 dbscan.ipynb
+data/scholar

@@ -179,7 +179,7 @@ class TMMatcher(object):
         matched_modelB_topics = set()
 
         while len(matches) < N:
-            # Find the pair of topics with the minimum distance, ignoring already matched topics
+            # Reset minimum distance and best match at the start of each iteration
             min_dist = np.inf
             best_match = None
             
@@ -193,6 +193,11 @@ class TMMatcher(object):
                         min_dist = dist_matrix[topicA, topicB]
                         best_match = (topicA, topicB)
             
+            # If no valid match is found, break out of the loop to prevent infinite loop
+            if best_match is None:
+                print("No more matches found, exiting loop early")
+                break
+            
             # Append the best match and mark those topics as matched
             matches.append(best_match)
             matched_modelA_topics.add(best_match[0])
@@ -201,10 +206,8 @@ class TMMatcher(object):
             # Optionally, set the matched topics' distances to infinity to avoid future matching
             dist_matrix[best_match[0], :] = np.inf
             dist_matrix[:, best_match[1]] = np.inf
-
+            
         return matches
-
-    
                 
 def main():
     parser = argparse.ArgumentParser()

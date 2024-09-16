@@ -200,44 +200,44 @@ class TopicModel(ABC):
             df['lemmas'] = df['lemmas'].apply(lambda row: tkz_clean_str(row, stops_path, eqs_path))
             self._logger.info(f"-- -- Further processing done in {(time.time() - start_time) / 60} minutes. Saving to {preproc_file}")
                     
-        # filter words with less than 3 characters
-        self._logger.info(f"-- -- Filtering out words with less than 3 characters")
-        df["lemmas"] = df['lemmas'].apply(lambda x: ' '.join([el for el in x.split() if len(el) > 3]))  # remove short words
-        
-        # filter extrems
-        self._logger.info(f"-- -- Filtering out documents with less than {min_lemas} lemas")
-        df["n_tokens"] = df["lemmas"].apply(lambda x : len(x.split()))
-        len_df = len(df)
-        df = df[df["n_tokens"] >= min_lemas]
-        self._logger.info(f"-- -- Filtered out {len_df - len(df)} documents with less than {min_lemas} lemas")
-        
-        # Gensim filtering
-        self._logger.info(f"-- -- Filtering out vocabulary with no_below={no_below}, no_above={no_above}, keep_n={keep_n}")
-        final_tokens = [el.split() for el in df['lemmas'].values.tolist()]
-        dict = corpora.Dictionary(final_tokens)
-
-        dict.filter_extremes(
-            no_below=no_below,
-            no_above=no_above, 
-            keep_n=keep_n
-        )
-        
-        vocabulary = set([dict[idx] for idx in range(len(dict))])
-        self._logger.info(f"-- -- Vocabulary size: {len(vocabulary)}")
-        #import pdb; pdb.set_trace()
-        df["lemmas"] = df['lemmas'].apply(lambda x: ' '.join([el for el in x.split() if el in vocabulary]))
-        
-        # Save Gensim dictionary
-        self._logger.info(f"-- -- Saving Gensim dictionary")
-        GensimFile = self.save_path.joinpath('dictionary.gensim')
-        if GensimFile.is_file():
-            GensimFile.unlink()
-        dict.save_as_text(GensimFile)
-        with self.save_path.joinpath('vocabulary.txt').open('w', encoding='utf8') as fout:
-            fout.write(
-                '\n'.join([dict[idx] for idx in range(len(dict))]))
+            # filter words with less than 3 characters
+            self._logger.info(f"-- -- Filtering out words with less than 3 characters")
+            df["lemmas"] = df['lemmas'].apply(lambda x: ' '.join([el for el in x.split() if len(el) > 3]))  # remove short words
             
-        df.to_parquet(preproc_file)
+            # filter extrems
+            self._logger.info(f"-- -- Filtering out documents with less than {min_lemas} lemas")
+            df["n_tokens"] = df["lemmas"].apply(lambda x : len(x.split()))
+            len_df = len(df)
+            df = df[df["n_tokens"] >= min_lemas]
+            self._logger.info(f"-- -- Filtered out {len_df - len(df)} documents with less than {min_lemas} lemas")
+            
+            # Gensim filtering
+            self._logger.info(f"-- -- Filtering out vocabulary with no_below={no_below}, no_above={no_above}, keep_n={keep_n}")
+            final_tokens = [el.split() for el in df['lemmas'].values.tolist()]
+            dict = corpora.Dictionary(final_tokens)
+
+            dict.filter_extremes(
+                no_below=no_below,
+                no_above=no_above, 
+                keep_n=keep_n
+            )
+            
+            vocabulary = set([dict[idx] for idx in range(len(dict))])
+            self._logger.info(f"-- -- Vocabulary size: {len(vocabulary)}")
+            #import pdb; pdb.set_trace()
+            df["lemmas"] = df['lemmas'].apply(lambda x: ' '.join([el for el in x.split() if el in vocabulary]))
+            
+            # Save Gensim dictionary
+            self._logger.info(f"-- -- Saving Gensim dictionary")
+            GensimFile = self.save_path.joinpath('dictionary.gensim')
+            if GensimFile.is_file():
+                GensimFile.unlink()
+            dict.save_as_text(GensimFile)
+            with self.save_path.joinpath('vocabulary.txt').open('w', encoding='utf8') as fout:
+                fout.write(
+                    '\n'.join([dict[idx] for idx in range(len(dict))]))
+                
+            df.to_parquet(preproc_file)
         
         self.df = df
 
@@ -748,14 +748,19 @@ class MalletLdaModel(TopicModel):
                 'c_v': 0,
                 'c_uci': 0,
                 'c_npmi': 0
+        }
+
+        """
+        {
+                'c_v': 0,
+                'c_uci': 0,
+                'c_npmi': 0
             } #self.get_coherence(self.train_data, topics_, all=True)
         
         """
         
-        """
-        
         self._logger.info(
-            f"-- -- Coherence metrics: {metrics}"
+            f"-- -- Coherence metrics: {metrics} for {self.num_topics} topics"
         )
 
         # Calculate distributions
@@ -984,7 +989,7 @@ class CtmModel(TopicModel):
         num_iters: int = 250,
         topn: int = 15,
         sbert_model: str = "paraphrase-distilroberta-base-v2",
-        sbert_context: int = 768,
+        sbert_context: int = 384,
         load_data_path: str = "data/source/cordis_preprocessed.json",
         batch_size: int = 32,
         load_model: bool = False,

@@ -42,7 +42,7 @@ def main():
         "--model_2_path", # Non-optimized
         help="Path to the second model",
         required=False,
-        default="/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/out/non_optimized/4.training/datos_modelo_es_Mallet_df_merged_14_topics_45_ENTREGABLE/MalletLda_14"
+        default="/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/out/non_optimized/4.training/datos_modelo_es_Mallet_df_merged_14_topics_45_ENTREGABLE/TopicGPT_50"
     )
     parser.add_argument(
         "--id_fld",
@@ -54,7 +54,7 @@ def main():
         "--model_types",
         help="Types of the models",
         required=False,
-        default="MalletLda,MalletLda"
+        default="MalletLda,Ctm"#BERTopic
     )
         
         
@@ -90,17 +90,18 @@ def main():
 
         model = create_model(model_types[m], **params_inference)
         if m == 0: # Optimized
-            tfidf = False
+            tfidf = True
+            topics = model.print_topics(tfidf=tfidf)
         else: # Non-optimized
             tfidf = False
-        topics = model.print_topics(tfidf=tfidf)
+            topics = model.print_topics()
+            import pdb; pdb.set_trace()
         topics = [topics[topic][:15] for topic in topics]
         
         models_topics.append(topics)
-        models_betas.append(model.get_betas())
-        models_thetas.append(model.get_thetas())
-        models_vocabs.append(model.vocab)
-    
+        #models_betas.append(model.get_betas())
+        #models_thetas.append(model.get_thetas())
+        #models_vocabs.append(model.vocab)
     import pdb; pdb.set_trace()
     tm_matcher = TMMatcher()
     #matches = tm_matcher.iterative_matching(models_topics, 5)#len(models_topics[0]))
@@ -117,6 +118,30 @@ def main():
         print("-- -- Optimized model topic:", match[0], models_topics[0][match[0]])
         print("-- -- Non-optimized model topic:", match[1], models_topics[1][match[1]])
         print("-+-"*20)
+        
+    import pandas as pd
+
+    # Assuming matches and models_topics are already defined
+    data = []
+
+    for match in matches:
+        optimized_topic = match[0]
+        non_optimized_topic = match[1]
+        optimized_model_topic_words = models_topics[0][match[0]]
+        non_optimized_model_topic_words = models_topics[1][match[1]]
+        
+        data.append({
+            "Optimized Model Topic": optimized_topic,
+            "Optimized Model Topic Words": optimized_model_topic_words,
+            "Non-Optimized Model Topic": non_optimized_topic,
+            "Non-Optimized Model Topic Words": non_optimized_model_topic_words
+        })
+
+    # Convert the data to a pandas DataFrame
+    df = pd.DataFrame(data)
+
+    # Save the DataFrame to an Excel file
+    df.to_excel("topic_comparison_bertopic_palce.xlsx", index=False)
         
     import pdb; pdb.set_trace()
     # ***********************************************************************
