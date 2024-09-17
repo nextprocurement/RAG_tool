@@ -103,14 +103,32 @@ def tkz_clean_str(
         """
 
         eq_files = pathlib.Path(eqs_path).rglob('*')
+        if eq_files == []:
+            return {}
+        
         equivalent = {}
+        duplicates = set()
+
         for eqFile in eq_files:
             with eqFile.open('r', encoding='utf8') as fin:
                 newEq = json.load(fin)['wordlist']
+            
+            # Split terms into key-value pairs
             newEq = [x.split(':') for x in newEq]
+            # Filter valid pairs
             newEq = [x for x in newEq if len(x) == 2]
-            newEq = dict(newEq)
-            equivalent = {**equivalent, **newEq}
+            # Convert to dictionary
+            newEq_dict = dict(newEq)
+
+            # Add to the equivalent dictionary only if the key is not already present
+            for key, value in newEq_dict.items():
+                if key not in equivalent:  # Add only if key is not already present
+                    equivalent[key] = value
+                else:
+                    duplicates.add(key)  # Track the duplicate key
+
+        #if duplicates:
+        #    print(f"Ignored duplicate keys: {duplicates}")
 
         return equivalent
     

@@ -145,6 +145,69 @@ class TMMatcher(object):
                             dists[(modelB, modelA)][:, modelA_topic] = np.inf
         return random.sample(matches, N)
     
+    def one_to_one_matching(self, modelA, modelB, N, seed=2357_11):
+        """
+        Performs a one-to-one matching between the topics of two models.
+
+        Parameters
+        ----------
+        modelA : numpy.ndarray
+            Beta matrix from the first model.
+        modelB : numpy.ndarray
+            Beta matrix from the second model.
+        N : int
+            Number of matches to find.
+
+        Returns
+        -------
+        list of tuple
+            List of tuples where each tuple contains the topic index from modelA and the matched topic index from modelB.
+        """
+        random.seed(seed)
+        
+        # Compute the distance matrix between the topics of modelA and modelB
+        dist_matrix = self._get_wmd_mat([modelA, modelB])
+
+        # List to store the one-to-one matches
+        matches = []
+
+        # Ensure that N does not exceed the number of topics in either model
+        assert N <= len(modelA) and N <= len(modelB)
+
+        # Track which topics have been matched
+        matched_modelA_topics = set()
+        matched_modelB_topics = set()
+
+        while len(matches) < N:
+            # Reset minimum distance and best match at the start of each iteration
+            min_dist = np.inf
+            best_match = None
+            
+            for topicA in range(len(modelA)):
+                if topicA in matched_modelA_topics:
+                    continue
+                for topicB in range(len(modelB)):
+                    if topicB in matched_modelB_topics:
+                        continue
+                    if dist_matrix[topicA, topicB] < min_dist:
+                        min_dist = dist_matrix[topicA, topicB]
+                        best_match = (topicA, topicB)
+            
+            # If no valid match is found, break out of the loop to prevent infinite loop
+            if best_match is None:
+                print("No more matches found, exiting loop early")
+                break
+            
+            # Append the best match and mark those topics as matched
+            matches.append(best_match)
+            matched_modelA_topics.add(best_match[0])
+            matched_modelB_topics.add(best_match[1])
+
+            # Optionally, set the matched topics' distances to infinity to avoid future matching
+            dist_matrix[best_match[0], :] = np.inf
+            dist_matrix[:, best_match[1]] = np.inf
+            
+        return matches
                 
 def main():
     parser = argparse.ArgumentParser()

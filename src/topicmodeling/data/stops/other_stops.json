@@ -4,6 +4,8 @@
     "valid_for": "stopwords",
     "visibility": "Public",
     "wordlist": [
-        "él"
+        "él",
+        "estar",
+        "están"
     ]
 }

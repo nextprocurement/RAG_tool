@@ -23,12 +23,12 @@ acr:
 preproc:
   preprocessing_script: "/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/src/preprocessing/pipe/nlpipe.py"
   source_type : "parquet"
-  spacy_model : "es_core_news_lg"
+  spacy_model : "es_core_news_lg" #en_core_web_lg
   lang : "es"
 
 equiv:
   num_topics : 100
-  further_proc: False
+  further_proc: True
   model_type: "MalletLda"
-  path_save : "src/topicmodeling/data/equivalences"
   language : "spanish"
+  top_k : 100

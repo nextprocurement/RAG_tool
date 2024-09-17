@@ -17,10 +17,33 @@ import ast
 import itertools
 from sentence_transformers.util import cos_sim
 from dspy.datasets import Dataset
-from src.topicmodeling.topic_model import BERTopicModel, CtmModel, MalletLdaModel, TopicGPTModel
 from dspy.evaluate import Evaluate
-
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler, normalize
 from src.utils.tm_utils import create_model
+from sklearn.metrics.pairwise import cosine_similarity
+from scipy.sparse import csr_matrix
+from collections import defaultdict
+from scipy.sparse.csgraph import connected_components
+from sklearn.metrics import silhouette_score
+from spacy_download import load_spacy
+import unicodedata
+from sklearn.metrics import davies_bouldin_score
+
+def eliminar_tildes(palabra):
+    return ''.join(
+        (c for c in unicodedata.normalize('NFD', palabra) if unicodedata.category(c) != 'Mn')
+    )
+
+def solo_diferencia_tilde(palabra1, palabra2):
+    # Eliminar tildes y comparar
+    if eliminar_tildes(palabra1) == eliminar_tildes(palabra2):
+        # Si una palabra tiene tilde, devolver esa
+        if palabra1 != eliminar_tildes(palabra1):
+            return palabra1
+        elif palabra2 != eliminar_tildes(palabra2):
+            return palabra2
+    return None  # Si no hay diferencia por tilde, devuelve None
 
 
 #######################################################################
@@ -68,7 +91,36 @@ class EquivalencesDataset(Dataset):
     def _convert_to_json(self, data: pd.DataFrame):
         if data is not None:
             return data.to_dict(orient='records')
-
+        
+class Corrector(dspy.Signature):
+    """Corrects spelling mistakes in the given word.
+    
+    ----------------------------------------------------------------------------
+    Examples
+    --------
+    WORD: "celebracion"
+    CORRECTED_WORD: "celebración"
+    """
+    
+    WORD = dspy.InputField()
+    CORRECTED_WORD = dspy.OutputField()
+    
+class CorrectorModule(dspy.Module):
+    def __init__(
+        self,
+    ):
+        """
+        Initialize the CorrectorModule, which corrects spelling mistakes in the given word.
+        """
+        super().__init__()
+        self.corrector = dspy.Predict(Corrector)
+        
+    def forward(self, word: str):
+        """
+        Forward pass of the module.
+        """
+        
+        return self.corrector(WORD=word).CORRECTED_WORD
 
 class TransformNotOptim(dspy.Signature):
     """
@@ -118,13 +170,20 @@ class TransformOptim(dspy.Signature):
     --------
     WORDS: ["calefacció", "calor"]		
     MAPPED_WORDS: [{"calefacción": calefacció}]
+    
+    WORDS: ["vivienda_protegida", "vivienda", "viviendas_protegidas"]
+    MAPPED_WORDS: [{"vivienda_protegida": "viviendas_protegidas"}]
+    
+    WORDS: ["expte", "expdte"]
+    MAPPED_WORDS: [{"vivienda_protegida": "expdte, expte"}]
     ----------------------------------------------------------------------------
 
     Important: The final word must be a single word or multiple words in LANGUAGE joined by an underscore ('_'). 
-    Use the simplest form, e.g., choose "digital" over "digitales" and a single word over a compound word, e.g., "proyecto" over "proyecto_básico". 
-    If it applies, the final word should be a noun over an adverb, adjective or verb.
+    Do not loose specific information, e.g., "vivienda_protegida" should not be mapped to "vivienda", since it is a specific type of housing.
+    If it applies, the final word should be a noun over an adverb, adjective or verb. If it is a noun, it should be singular, and if it is a verb, it should be in the infinitive form.
+    If you are present with acronyms or abbreviations, map them to the full form.
     """
-
+    # and a single word over a compound word, e.g., "proyecto" over "proyecto_básico"
     WORDS = dspy.InputField()
     LANGUAGE = dspy.InputField()
     MAPPED_WORDS = dspy.OutputField()
@@ -133,6 +192,7 @@ class TransformModule(dspy.Module):
     def __init__(
         self,
         optim: bool = False,
+        lang: str = "spanish"
     ):  
         """
         Initialize the TransformModule, which maps similar terms to a common form in LANGUAGE, considering lemmatization errors, synonyms, and spelling variations.
@@ -150,72 +210,204 @@ class TransformModule(dspy.Module):
             self.transform = dspy.ChainOfThought(TransformNotOptim)
         self.roman_numeral_pattern = r'_(M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3}))$'
 
+        if lang == "es":
+            self._nlp_model = load_spacy("es_core_news_md")
+        else:
+            self._nlp_model = load_spacy("en_core_web_md")
+        self._trf_model = SentenceTransformer("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+
+
     def parse_equivalences(
         self,
-        equivalences: str,
-        word_embeddings: Dict[str, Any], 
+        equivalences_str: str,
+        word_embeddings: Optional[Dict[str, Any]] = None,
         thr_similarity: float = 0.96
     ) -> List[Dict[str, List[str]]]:
         """
-        Parse the equivalences string and return a list of dictionaries with the equivalences, following the format:
-        
-        [{"key": ["value1", "value2", ...]}, ...]
-        
+        Parse the equivalences string and return a list of dictionaries with the equivalences.
+
         Parameters
         ----------
-        equivalences : str
-            A string containing the equivalences in the format of a Python dictionary, returned by the TransformModule for MAPPED_WORDS.
-        word_embeddings : Dict[str, Any]
+        equivalences_str : str
+            A string containing the equivalences in the format of a Python dictionary.
+        word_embeddings : Dict[str, Any], optional
             A dictionary containing the word embeddings for the words in the equivalences.
+        thr_similarity : float
+            The threshold for cosine similarity to consider words as equivalent.
+
+        Returns
+        -------
+        List[Dict[str, List[str]]]
+            A list of dictionaries containing the parsed equivalences.
         """
-        
         try:
-            # Safely parse the input string as a Python dictionary
-            equivalences = ast.literal_eval(equivalences)
-            print(equivalences)
-            final_eqs = []
-            for el in equivalences:
-                print(el)
-                # Get the first key in the dictionary
-                key = list(el.keys())[0]
+            equivalences = ast.literal_eval(equivalences_str)
+        except (SyntaxError, ValueError) as e:
+            print(f"Error parsing equivalences string: {e}")
+            return []
 
-                new_key = key
-                match = re.search(self.roman_numeral_pattern, key, flags=re.IGNORECASE)
-                if match:
-                    new_key = key[:match.start()]
-    
-                # Initialize an empty list for equivalences related to this key
-                eq_dict = {new_key: []}
-       
-                # Iterate over each value split by commas
-                for val in el[key].split(","):
-                    val = val.strip()  # Strip leading/trailing spaces
-    
-                    if key == val:
-                        continue  # Skip if the value is identical to the key
-    
-                    # If the first 5 characters differ, enforce a stricter similarity threshold
+        final_equivalences = []
+        for el in equivalences:
+            key = next(iter(el))
+            new_key = self._remove_roman_numerals(key)
+
+            eq_dict = {new_key: []}
+            values = [v.strip() for v in el[key].split(",") if v.strip() and v.strip() != key]
+
+            for val in values:
+                new_key = self._process_value(
+                    key, val, new_key, eq_dict, word_embeddings, thr_similarity
+                )
+
+            try:
+                if eq_dict[new_key]:
+                    # check if there are repeated values. If so, count them
+                    repeated_values = [item for item in eq_dict[new_key] if eq_dict[new_key].count(item) > 1]
                     
-                    if word_embeddings is not None and key[:3] != val[:3]:
-                        try:
-                            similarity = cos_sim(word_embeddings[key], word_embeddings[val])
-                        except Exception as e:
-                            continue
-                        if similarity is None or similarity < thr_similarity:
-                            continue  # Skip if similarity is below the threshold
-                    # If they have the same first 5 characters or similarity is high, add it
-                    eq_dict[new_key].append(val)
+                    if repeated_values and len(repeated_values) > 1:
+                        eq_dict[new_key] = list(set(eq_dict[new_key]))# keep only unique values
+                    
+                    final_equivalences.append(eq_dict)
+            except KeyError as e:
+                print(f"KeyError: {e}")
 
-                if eq_dict[new_key] != []:
-                    final_eqs.append(eq_dict)            
+        return final_equivalences
+
+    def _remove_roman_numerals(self, text: str) -> str:
+        match = re.search(self.roman_numeral_pattern, text, flags=re.IGNORECASE)
+        return text[:match.start()].strip() if match else text
+
+    def _process_value(
+        self,
+        key: str,
+        val: str,
+        new_key: str,
+        eq_dict: Dict[str, List[str]],
+        word_embeddings: Optional[Dict[str, Any]],
+        thr_similarity: float
+    ):
+        key_split = key.split("_")
+        val_split = val.split("_")
+
+        # Check if key and val are the same
+        if key == val:
+            return  # Skip if they are identical
+
+        # Handle specific cases
+        if self._is_specific_type(key_split, val_split, key, val):
+            return
+
+        # Handle cases where both key and val have the same prefix
+        if key_split[0] == val_split[0]:
+            if self._handle_same_prefix(
+                key_split, val_split, eq_dict, thr_similarity
+            ):
+                return
+        else:
+            # Handle the general case
+            new_key = self._handle_general_case(
+                key, val, new_key, eq_dict, word_embeddings, thr_similarity
+            )
+        return new_key
+
+    def _is_specific_type(
+        self,
+        key_split: List[str],
+        val_split: List[str],
+        key: str,
+        val: str
+    ) -> bool:
+        # Skip mapping if one is a specific type of the other
+        if len(key_split) == 1 and len(val_split) > 1 and key_split[0] == val_split[0]:
+            print(f"Skipping '{val}' since it is a specific type of '{key}'")
+            return True
+        if len(val_split) == 1 and len(key_split) > 1 and val_split[0] == key_split[0]:
+            print(f"Skipping '{key}' since it is a specific type of '{val}'")
+            return True
+        return False
+
+    def _handle_same_prefix(
+        self,
+        key_split: List[str],
+        val_split: List[str],
+        eq_dict: Dict[str, List[str]],
+        thr_similarity: float
+    ) -> bool:
+        if len(key_split) > 1 and len(val_split) > 1:
+            # Check if the suffixes are proper nouns
+            if self._are_proper_nouns(key_split[1], val_split[1]):
+                #import pdb; pdb.set_trace()
+                base_key = key_split[0]
+                eq_dict.setdefault(base_key, []).extend([key_split[1], val_split[1]])
+                print(f"'{key_split[1]}' and '{val_split[1]}' are proper nouns. Mapping to '{base_key}'")
+                return True
+            else:
+                # Compare embeddings of the suffixes
+                similarity = self._compare_embeddings(
+                    key_split[1], val_split[1], thr_similarity
+                )
+                if similarity >= thr_similarity:
+                    eq_dict.setdefault("_".join(key_split), []).append("_".join(val_split))
+                    print(f"Suffixes '{key_split[1]}' and '{val_split[1]}' are similar.")
+                    return True
+                else:
+                    print(f"Low similarity ({similarity}) between '{key_split[1]}' and '{val_split[1]}'")
+                    return False
+        return False
+
+    def _are_proper_nouns(self, text1: str, text2: str) -> bool:
+        doc1 = self._nlp_model(text1)
+        doc2 = self._nlp_model(text2)
+        return all(token.pos_ == "PROPN" for token in doc1) and all(token.pos_ == "PROPN" for token in doc2)
+
+    def _compare_embeddings(
+        self,
+        text1: str,
+        text2: str,
+        thr_similarity: float
+    ) -> float:
+        emb1 = self._trf_model.encode(text1)
+        emb2 = self._trf_model.encode(text2)
+        similarity = cos_sim(emb1, emb2)
+        return similarity
+
+    def _handle_general_case(
+        self,
+        key: str,
+        val: str,
+        new_key: str,
+        eq_dict: Dict[str, List[str]],
+        word_embeddings: Optional[Dict[str, Any]],
+        thr_similarity: float
+    ):
+        print("Handling general case")
+
+        dif_tilde = solo_diferencia_tilde(key, val)
+        if dif_tilde:
+            if dif_tilde == key:
+                eq_dict[new_key].append(val)
+                print(f"Words '{key}' and '{val}' differ only by accent marks. Mapping '{val}' to '{new_key}'.")
+            elif dif_tilde == val:
+                # replace new_key with val
+                eq_dict[val] = eq_dict.pop(new_key)
+                eq_dict[val].append(key)
+                new_key = val
+        elif word_embeddings is not None and key[:3] != val[:3]:
+            try:
+                similarity = cos_sim(word_embeddings[key], word_embeddings[val])
+            except KeyError as e:
+                print(f"Word embedding not found: {e}")
+                return
+            if similarity >= thr_similarity:
+                eq_dict[new_key].append(val)
+                print(f"Words '{key}' and '{val}' are similar (similarity: {similarity}). Mapping them.")
+            else:
+                print(f"Similarity between '{key}' and '{val}' is {similarity}. Skipping...")
+        else:
+            eq_dict[new_key].append(val)
+            print(f"Mapping '{val}' to '{new_key}' by default.")
             
-            return final_eqs
-        
-        except (SyntaxError, ValueError, TypeError) as e:
-            # Handle invalid input or evaluation issues gracefully
-            print(f"Error parsing equivalences: {e}")
-            print(equivalences)
-            return []    
+        return new_key
 
     def forward(
         self,
@@ -249,6 +441,7 @@ class HermesEquivalencesGenerator(object):
         trained_promt: str = pathlib.Path(
             __file__).parent.parent.parent / "data/optimized/HermesEquivalencesGenerator-saved.json",
         trf_model: str = 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2',
+        lang = "es",
         logger: logging.Logger = None,
         path_logs: pathlib.Path = pathlib.Path(
             __file__).parent.parent.parent / "data/logs"
@@ -282,6 +475,11 @@ class HermesEquivalencesGenerator(object):
         
         self._logger = logging.getLogger(__name__)
         self._model = SentenceTransformer(trf_model)
+        if lang == "es":
+            self._nlp_model = load_spacy("es_core_news_md")
+        else:
+            self._nlp_model = load_spacy("en_core_web_md")
+        self._corrector = CorrectorModule()
         
         # Dspy settings
         if model_type == "llama":
@@ -295,12 +493,12 @@ class HermesEquivalencesGenerator(object):
         dspy.settings.configure(lm=self.lm)
         
         if not use_optimized:
-            self.module = TransformModule(optim=False)
+            self.module = TransformModule(optim=False, lang=lang)
         elif use_optimized and not do_train:
             if not pathlib.Path(trained_promt).exists():
                 self._logger.error("-- -- Trained prompt not found. Exiting.")
                 return
-            self.module = TransformModule(optim=True)
+            self.module = TransformModule(optim=True, lang=lang)
             self.module.load(trained_promt)
             self._logger.info(f"-- -- TransformModule loaded from {trained_promt}")
         else:
@@ -342,7 +540,7 @@ class HermesEquivalencesGenerator(object):
         # Count number of clusters (excluding noise labeled as -1)
         n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
         n_noise = list(labels).count(-1)
-
+        
         self._logger.info(f'-- -- Number of clusters: {n_clusters}')
         print(f'-- -- Number of noise points: {n_noise}')
         print(f'-- -- Labels: {set(labels)}')
@@ -372,6 +570,36 @@ class HermesEquivalencesGenerator(object):
         embedding_dict = {word: embedding for word, embedding in zip(word_list, embeddings)}
         
         return embedding_dict
+    
+    def _perform_pca(self, data, variance_threshold=0.9):
+        """
+        Performs PCA on the given data and retains components that explain the desired variance.
+
+        Parameters:
+        - data: numpy array of shape (N, M), where N is the number of samples and M is the number of features.
+        - variance_threshold: float between 0 and 1 indicating the cumulative variance to retain.
+
+        Returns:
+        - reduced_data: Transformed data with reduced dimensions.
+        - n_components: Number of principal components retained.
+        - explained_variance_ratio: Explained variance ratio of the retained components.
+        """
+        # Standardize the data to have mean=0 and variance=1
+        scaler = StandardScaler()
+        X_std = scaler.fit_transform(data)
+
+        # Perform PCA to retain components that explain the desired variance
+        pca = PCA(n_components=variance_threshold)
+        reduced_data = pca.fit_transform(X_std)
+        n_components = pca.n_components_
+        explained_variance_ratio = pca.explained_variance_ratio_
+
+        # Print the results
+        print(f"Number of components to retain {variance_threshold * 100}% variance: {n_components}")
+        print(f"Explained variance ratio of retained components: {explained_variance_ratio}")
+        print(f"Cumulative explained variance: {np.cumsum(explained_variance_ratio)}")
+
+        return reduced_data, n_components, explained_variance_ratio
 
     def _get_words_by_cluster(
         self,
@@ -414,6 +642,81 @@ class HermesEquivalencesGenerator(object):
                 cluster_to_words[cluster_id].append(word)  # Append word to the corresponding cluster
         
         return cluster_to_words
+    
+    def _get_words_by_cluster_sim(
+        self,
+        embeddings: np.ndarray,
+        words: List[str],
+        thr=0.9,
+    ):  
+        
+        # Perform PCA on the embeddings
+        embeddings_X, _, _ = self._perform_pca(embeddings)
+        
+        # Normalize embeddings
+        embeddings = normalize(embeddings_X, norm='l2') 
+        
+        # Calculate cosine similarity matrix
+        similarity_matrix = cosine_similarity(embeddings)
+
+        thresholds = np.linspace(0.1, 0.9, 9)
+        print(f'Calculating connected components for different thresholds: {thresholds}....')
+        results = []
+        for threshold in thresholds:
+            adjacency_matrix = similarity_matrix > threshold
+            np.fill_diagonal(adjacency_matrix, False)
+            adjacency_csr = csr_matrix(adjacency_matrix)
+            n_components, labels = connected_components(adjacency_csr)
+            
+            # Map words to clusters
+            cluster_to_words = defaultdict(list)
+            for word, label in zip(words, labels):
+                cluster_to_words[label].append(word)
+
+            # Filter to keep only clusters with more than one word
+            reduced_cluster_to_words = {label: words for label, words in cluster_to_words.items() if len(words) > 1}
+            
+            # Optional: count how many clusters have more than one word
+            n_components_more = len(reduced_cluster_to_words)
+            
+            word_groups = list(cluster_to_words.values())
+            results.append((threshold, n_components, len(word_groups)))
+            if len(set(labels)) > 1:
+                score = silhouette_score(embeddings, labels, metric='cosine')
+                dbi = davies_bouldin_score(embeddings, labels)
+                self._logger.info(f'Silhouette Score: {score:.4f}')
+                print(f'Silhouette Score: {score:.4f}')
+                print(f'Davies-Bouldin Index: {dbi:.2f}')
+            else:
+                score = -1
+                dbi = -1
+                print("Silhouette Score: No se puede calcular con solo un cluster.")
+            print(f'Threshold: {threshold:.2f}, Components: {n_components}, Word Groups: {len(word_groups)}, n_components_more: {n_components_more}, Silhouette Score: {score:.4f}')
+            self._logger.info(f'Threshold: {threshold:.2f}, Components: {n_components}, Word Groups: {len(word_groups)}, n_components_more: {n_components_more}, Silhouette Score: {score:.4f}')
+        
+        adjacency_matrix = similarity_matrix > thr
+        np.fill_diagonal(adjacency_matrix, False)
+        adjacency_csr = csr_matrix(adjacency_matrix)
+        n_components, labels = connected_components(adjacency_csr)
+        
+        if len(set(labels)) > 1:
+            score = silhouette_score(embeddings, labels, metric='cosine')
+            self._logger.info(f'Silhouette Score: {score:.4f}')
+            print(f'Silhouette Score: {score:.4f}')
+            dbi = davies_bouldin_score(embeddings, labels)
+            print(f'Davies-Bouldin Index: {dbi:.2f}')
+        else:
+            print("Silhouette Score: No se puede calcular con solo un cluster.")
+            
+        #import pdb; pdb.set_trace()
+        
+        # Map words to clusters
+        cluster_to_words = defaultdict(list)
+        for word, label in zip(words, labels):
+            cluster_to_words[label].append(word)
+        reduced_cluster_to_words = [words for label, words in cluster_to_words.items() if len(words) > 1]
+        
+        return reduced_cluster_to_words
 
     def _train_module(
         self,
@@ -545,6 +848,9 @@ class HermesEquivalencesGenerator(object):
         
         print(f"## Test set results ##")
         print(df.head())
+        print(f"## Mean metric TEST: {df['METRIC'].mean()}")
+        self._logger.info(f"## Mean metric TEST: {df['METRIC'].mean()}")
+        #import pdb; pdb.set_trace()
         evaluate = Evaluate(
             devset=devset, metric=self.validate_equivalences, num_threads=1, display_progress=True)
         compiled_score = evaluate(compiled_pred)
@@ -563,9 +869,10 @@ class HermesEquivalencesGenerator(object):
         source: str, # either "vocabulary" or "tm"
         path_to_source: str = None,
         model_type: str = "MalletLda",
-        language: str = "spanish",
+        language: str = "es",
         path_save: str = "/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/src/topicmodeling/data/equivalences/cpv45_equivalences_test_vocab.json",
-        optim: bool = False
+        optim: bool = False,
+        top_k: int = 100
     ):
         """
         Generate equivalences for the given words and language.
@@ -596,11 +903,9 @@ class HermesEquivalencesGenerator(object):
             params_inference['mallet_path'] = "/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/src/topicmodeling/Mallet-202108/bin/mallet"
 
             model = create_model(model_type, **params_inference)
-            topics = model.print_topics()
-
-            #for i, topic in enumerate(topics):
-            #    print("Topic #", i)
-            #    print(topics[topic])
+            topics = model.print_topics(top_k=top_k)
+            # keep top-k words from each topic
+            topics = {k: v[:top_k] for k, v in topics.items() if len(v) > 0}
 
             all_words = list(set(list(itertools.chain(*topics.values()))))
         
@@ -611,14 +916,17 @@ class HermesEquivalencesGenerator(object):
         word_embeddings = self._get_embeddings(all_words)
         words = list(word_embeddings.keys())
         embeddings = np.array(list(word_embeddings.values()))
-        labels = self._get_clusters(embeddings)
-        cluster_to_words = self._get_words_by_cluster(labels, words)
+        #labels = self._get_clusters(embeddings)
+        #cluster_to_words = self._get_words_by_cluster(labels, words)
+        # word_groups = [cluster_to_words[el] for el in cluster_to_words ]
+        word_groups = self._get_words_by_cluster_sim(embeddings, words)
         
-        word_groups = [cluster_to_words[el] for el in cluster_to_words ]
-        i = len(words)
-
         ######################################################################### Generate equivalences
         ########################################################################
+        if language == "es":
+            language = "spanish"
+        else:
+            language = "english"
         time_start = time.time()
         equivalences = []
         for el in word_groups:
@@ -628,18 +936,25 @@ class HermesEquivalencesGenerator(object):
                 print(e)
         
         df = pd.DataFrame(equivalences, columns= ["origin", "equivalence"])
-
+        
+        df.to_excel("/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/scholar_equivalences_test.xlsx")
+        
         # filter empty equivalences
         df = df[df['equivalence'].str.len() > 0]
         print(df.head())
-        
         # Loop through the dataframe to create the wordlist
         word_list = []
         for _, row in df.iterrows():
             for equivalence in row['equivalence']:
                 for key, values in equivalence.items():
                     for value in values:
-                        word_list.append(f"{value}:{key}")
+                        if language == "spanish":
+                            # correct the key
+                            key = self._corrector(key)
+                        # if new key has spaces, replace them with underscores
+                        key = key.replace(" ", "_")
+                        if key != value:
+                            word_list.append(f"{value}:{key}")
 
         # Create the JSON structure
         json_data = {

@@ -26,7 +26,17 @@ def create_model(model_name, **kwargs):
 
     return model_instance
 
-def train_model(model_path, model_type, num_topics, further_proc, logger, env, args):
+def train_model(
+    model_path,
+    model_type,
+    num_topics,
+    further_proc,
+    logger,
+    env,
+    args,
+    stw_path=None,
+    eq_path=None
+    ):
     
     model_path = pathlib.Path(model_path) / f"{model_type}_{num_topics}"
     logger.info(f"-- -- Training model of type {model_type} at {model_path}...")
@@ -54,6 +64,6 @@ def train_model(model_path, model_type, num_topics, further_proc, logger, env, a
     model = create_model(model_type, **params)
 
     # Train the model
-    model.train(further_proc)
+    model.train(further_proc=further_proc, stops_path=stw_path, eqs_path=eq_path)
     
     return model

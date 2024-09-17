@@ -168,7 +168,9 @@ class TopicModel(ABC):
         min_lemas: int = 3,
         no_below: int = 10,
         no_above: float = 0.6, 
-        keep_n: int = 100000
+        keep_n: int = 100000,
+        stops_path: str = "src/topicmodeling/data/stops",
+        eqs_path: str = "src/topicmodeling/data/equivalences"
     ) -> None:
         """
         Train the topic model and save the data to save_data_path
@@ -191,46 +193,51 @@ class TopicModel(ABC):
         preproc_file = pathlib.Path(self.save_path.as_posix()).joinpath(pathlib.Path(self.load_data_path).stem + "_preproc.parquet")
         
         df = load_processed_data(self.load_data_path)
-        
+                
         if further_proc: # remove add stops and equivs
             start_time = time.time()
             self._logger.info(f"-- -- Applying further processing to the data")
-            df['lemmas'] = df['lemmas'].apply(tkz_clean_str)
+            df['lemmas'] = df['lemmas'].apply(lambda row: tkz_clean_str(row, stops_path, eqs_path))
             self._logger.info(f"-- -- Further processing done in {(time.time() - start_time) / 60} minutes. Saving to {preproc_file}")
+                    
+            # filter words with less than 3 characters
+            self._logger.info(f"-- -- Filtering out words with less than 3 characters")
+            df["lemmas"] = df['lemmas'].apply(lambda x: ' '.join([el for el in x.split() if len(el) > 3]))  # remove short words
             
-        
-        # filter extrems
-        self._logger.info(f"-- -- Filtering out documents with less than {min_lemas} lemas")
-        df["n_tokens"] = df["lemmas"].apply(lambda x : len(x.split()))
-        len_df = len(df)
-        df = df[df["n_tokens"] >= min_lemas]
-        self._logger.info(f"-- -- Filtered out {len_df - len(df)} documents with less than {min_lemas} lemas")
-        
-        # Gensim filtering
-        self._logger.info(f"-- -- Filtering out vocabulary with no_below={no_below}, no_above={no_above}, keep_n={keep_n}")
-        final_tokens = [el.split() for el in df['lemmas'].values.tolist()]
-        dict = corpora.Dictionary(final_tokens)
-        dict.filter_extremes(
-            no_below=no_below,
-            no_above=no_above, 
-            keep_n=keep_n
-        )
-        vocabulary = set([dict[idx] for idx in range(len(dict))])
-        self._logger.info(f"-- -- Vocabulary size: {len(vocabulary)}")
-        
-        df["lemmas"] = df['lemmas'].apply(lambda x: ' '.join([el for el in x.split() if el in vocabulary]))
-        
-        # Save Gensim dictionary
-        self._logger.info(f"-- -- Saving Gensim dictionary")
-        GensimFile = self.save_path.joinpath('dictionary.gensim')
-        if GensimFile.is_file():
-            GensimFile.unlink()
-        dict.save_as_text(GensimFile)
-        with self.save_path.joinpath('vocabulary.txt').open('w', encoding='utf8') as fout:
-            fout.write(
-                '\n'.join([dict[idx] for idx in range(len(dict))]))
+            # filter extrems
+            self._logger.info(f"-- -- Filtering out documents with less than {min_lemas} lemas")
+            df["n_tokens"] = df["lemmas"].apply(lambda x : len(x.split()))
+            len_df = len(df)
+            df = df[df["n_tokens"] >= min_lemas]
+            self._logger.info(f"-- -- Filtered out {len_df - len(df)} documents with less than {min_lemas} lemas")
             
-        df.to_parquet(preproc_file)
+            # Gensim filtering
+            self._logger.info(f"-- -- Filtering out vocabulary with no_below={no_below}, no_above={no_above}, keep_n={keep_n}")
+            final_tokens = [el.split() for el in df['lemmas'].values.tolist()]
+            dict = corpora.Dictionary(final_tokens)
+
+            dict.filter_extremes(
+                no_below=no_below,
+                no_above=no_above, 
+                keep_n=keep_n
+            )
+            
+            vocabulary = set([dict[idx] for idx in range(len(dict))])
+            self._logger.info(f"-- -- Vocabulary size: {len(vocabulary)}")
+            #import pdb; pdb.set_trace()
+            df["lemmas"] = df['lemmas'].apply(lambda x: ' '.join([el for el in x.split() if el in vocabulary]))
+            
+            # Save Gensim dictionary
+            self._logger.info(f"-- -- Saving Gensim dictionary")
+            GensimFile = self.save_path.joinpath('dictionary.gensim')
+            if GensimFile.is_file():
+                GensimFile.unlink()
+            dict.save_as_text(GensimFile)
+            with self.save_path.joinpath('vocabulary.txt').open('w', encoding='utf8') as fout:
+                fout.write(
+                    '\n'.join([dict[idx] for idx in range(len(dict))]))
+                
+            df.to_parquet(preproc_file)
         
         self.df = df
 
@@ -646,13 +653,15 @@ class MalletLdaModel(TopicModel):
     def train(
         self,
         further_proc: bool = True,
+        stops_path: str = "src/topicmodeling/data/stops",
+        eqs_path: str = "src/topicmodeling/data/equivalences"
     ) -> None:
         """
         Train the topic model and save the data to save_data_path
         """
 
         # Call the train method from the parent class to load the data and initialize the save_path
-        super().train(further_proc=further_proc)
+        super().train(further_proc=further_proc, stops_path=stops_path, eqs_path=eqs_path)
 
         # Create folder for saving Mallet output files
         self.model_folder = self.save_path / "modelFiles"
@@ -679,6 +688,8 @@ class MalletLdaModel(TopicModel):
             '--remove-stopwords --token-regex "' + self.token_regexp + \
             '" --input %s --output %s'
         cmd = cmd % (corpus_txt_path, corpus_mallet)
+        
+        self._logger.info(f"-- -- Command to be run {cmd}")
 
         try:
             self._logger.info(f'-- -- Running command {cmd}')
@@ -733,18 +744,23 @@ class MalletLdaModel(TopicModel):
         betas = self.get_betas()
         topics = self.print_topics(verbose=False)
         topics_ = [topics[k] for k in topics.keys()]
-        metrics = self.get_coherence(self.train_data, topics_, all=True)
-        
+        metrics = {
+                'c_v': 0,
+                'c_uci': 0,
+                'c_npmi': 0
+        }
+
         """
         {
                 'c_v': 0,
                 'c_uci': 0,
                 'c_npmi': 0
-            }
+            } #self.get_coherence(self.train_data, topics_, all=True)
+        
         """
         
         self._logger.info(
-            f"-- -- Coherence metrics: {metrics}"
+            f"-- -- Coherence metrics: {metrics} for {self.num_topics} topics"
         )
 
         # Calculate distributions
@@ -864,7 +880,8 @@ class MalletLdaModel(TopicModel):
     def print_topics(
         self,
         verbose=False,
-        top_k: int = 15
+        top_k: int = 15,
+        tfidf: bool = False
     ) -> dict:
         """
         Print the list of topics for the topic model
@@ -881,17 +898,37 @@ class MalletLdaModel(TopicModel):
         """
 
         if not self.load_model:
+            
             self.topics = dict()
-            for k in range(self.num_topics):
-                words = [
-                    self.vocab[w]
-                    for w in np.argsort(self.betas[k])[::-1][0:top_k]
-                ]
-                self.topics[k] = words
-
+            
+            if tfidf:
+                # Calculate betas with downscoring ( Emphasizes words appearing less frequently in topics)
+                self.betas_ds = np.copy(self.betas)
+                if np.min(self.betas_ds) < 1e-12:
+                    self.betas_ds += 1e-12
+                deno = np.reshape((sum(np.log(self.betas_ds)) /
+                                self.num_topics), (len(self.betas.T), 1))
+                deno = np.ones((self.num_topics, 1)).dot(deno.T)
+                self.betas_ds = self.betas_ds * (np.log(self.betas_ds) - deno)
+                
+                for k in range(self.num_topics):
+                    words = [
+                        self.vocab[w]
+                        for w in np.argsort(self.betas_ds[k])[::-1]
+                    ]
+                    self.topics[k] = words
+                    
+            else:
+                for k in range(self.num_topics):
+                    words = [
+                        self.vocab[w]
+                        for w in np.argsort(self.betas[k])[::-1]
+                    ]
+                    self.topics[k] = words
         if verbose:
             [print(f"Topic {k}: {v}") for k, v in self.topics.items()]
-        return self.topics
+        
+        return self.topics #{k: v[:top_k] for k, v in self.topics.items()}
 
     def get_thetas(self):
         
@@ -952,7 +989,7 @@ class CtmModel(TopicModel):
         num_iters: int = 250,
         topn: int = 15,
         sbert_model: str = "paraphrase-distilroberta-base-v2",
-        sbert_context: int = 768,
+        sbert_context: int = 384,
         load_data_path: str = "data/source/cordis_preprocessed.json",
         batch_size: int = 32,
         load_model: bool = False,
@@ -980,13 +1017,15 @@ class CtmModel(TopicModel):
     def train(
         self,
         further_proc: bool = True,
+        stops_path: str = "src/topicmodeling/data/stops",
+        eqs_path: str = "src/topicmodeling/data/equivalences"
     ) -> None:
         """
         Train the topic model and save the data to save_data_path
         """
 
         # Call the train method from the parent class to load the data and initialize the save_path
-        super().train(get_embeddings=True, further_proc=further_proc)
+        super().train(get_embeddings=True, further_proc=further_proc, stops_path=stops_path, eqs_path=eqs_path)
 
 
         self._logger.info(
@@ -1242,13 +1281,15 @@ class BERTopicModel(TopicModel):
     def train(
         self,
         further_proc: bool = True,
+        stops_path: str = "src/topicmodeling/data/stops",
+        eqs_path: str = "src/topicmodeling/data/equivalences"
     ) -> None:
         """
         Train the topic model and save the data to save_data_path
         """
 
         # Call the train method from the parent class to load the data and initialize the save_path
-        super().train(get_embeddings=True, further_proc=further_proc)
+        super().train(get_embeddings=True, further_proc=further_proc, stops_path=stops_path, eqs_path=eqs_path)
         
         # Put components together to create BERTopic model
         # STEP 0 : Embedding model
@@ -1569,13 +1610,15 @@ class TopicGPTModel(TopicModel):
     def train(
         self,
         further_proc: bool = True,
+        stops_path: str = "src/topicmodeling/data/stops",
+        eqs_path: str = "src/topicmodeling/data/equivalences"
     ) -> None:
         """
         Train the topic model and save the data to save_data_path
         """
 
         # Call the train method from the parent class to load the data and initialize the save_path
-        super().train(get_preprocessed=False, further_proc=further_proc)
+        super().train(get_preprocessed=False, further_proc=further_proc, stops_path=stops_path, eqs_path=eqs_path)
 
         # Create folder for saving Mallet output files
         self.model_folder = self.save_path / "modelFiles"
