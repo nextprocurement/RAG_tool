@@ -6,6 +6,7 @@ import pathlib
 import logging
 import unidecode
 import ujson
+from time import sleep
 import re
 from sklearn.model_selection import train_test_split
 from sentence_transformers import SentenceTransformer
@@ -13,6 +14,14 @@ from sklearn.metrics.pairwise import cosine_similarity
 from dspy.teleprompt import BootstrapFewShotWithRandomSearch
 from lingua import Language, LanguageDetectorBuilder
 
+class TranslatorModule(dspy.Module):
+    def __init__(self):
+        super().__init__()
+        self.translate = dspy.Predict("english->spanish")
+
+    def forward(self, english_text):
+        spanish_text = self.translate(english=english_text).spanish
+        return spanish_text
 
 class AcronymExpander(dspy.Signature):
     """
@@ -45,6 +54,7 @@ class AcronymExpanderModule(dspy.Module):
     def __init__(self):
         super().__init__()
         self.expander = dspy.Predict(AcronymExpander)
+        self.translator = TranslatorModule()
         self.no_expansion_variations = [
             '/', '/ (no se expande)', '', '${TEXTO}', '${ACRONIMOS}', '/ (no hay expansión)',
             '(no es acronimo)', 'no se puede expandir', '${EXPANSION}', '${ACRONYMS}', '${ACRONYM}',
@@ -102,7 +112,18 @@ class AcronymExpanderModule(dspy.Module):
         for acronimo in acronimos_list:
             response = self.expander(TEXT=texto, ACRONYMS=acronimo, LANGUAGE=idioma)
             expansion_generada = response.EXPANSION
+            
+            # Detect the language of the generated expansion
+            expansion_language = language_detector.detect_language(expansion_generada)
+            print("El idioma de la expansión generada es:", expansion_language)
 
+            # If the expansion is in English but should be Spanish, translate it
+            if (expansion_language == 'ENGLISH' or expansion_language == 'CATALAN' or expansion_language == 'BASQUE') and idioma == 'SPANISH':
+                print(f"Traduciendo expansión de inglés a español: {expansion_generada}")
+                translator = TranslatorModule()
+                expansion_generada = translator.forward(expansion_generada)
+                print("Expansión traducida:", expansion_generada)
+                
             # Verificar si la expansión es vacía o un marcador de posición
             if not expansion_generada or expansion_generada in self.no_expansion_variations:
                 print(f"Entra aquí con el acrónimo: {acronimo}")

@@ -186,6 +186,26 @@ Untitled.ipynb
 src/topicmodeling/._Mallet-202108
 prueba_NER.xlsx
 check.py
+src/acronyms/expander_pruebas.py
+src/acronyms/detector_pruebas.py
+
+data/topic_labeller_tr_data.xlsx
+src/acronyms/dev_data.xlsx
+src/acronyms/test_data.xlsx
+src/acronyms/train_data.xlsx
+src/topicmodeling/data/acronyms/S2_Kwds3_AI_with_text_30000_both_equivalences.json
+src/topicmodeling/data/acronyms/S2_Kwds3_AI_with_text_30000_both_equivalences_CON_DUPLICADOS.json
+src/topicmodeling/data/acronyms/S2_Kwds3_AI_with_text_50_both_equivalences.json
+src/topicmodeling/data/acronyms/all_extracted_12aug_es_11_objectives_both_equivalences.json
+src/topicmodeling/data/acronyms/all_extracted_12aug_es_15_objectives_both_equivalences.json
+src/topicmodeling/data/acronyms/all_extracted_12aug_es_18_objectives_both_equivalences.json
+src/topicmodeling/data/acronyms/all_extracted_12aug_es_4_objectives_both_equivalences.json
+src/topicmodeling/data/acronyms/all_extracted_12aug_es_8_objectives_both_equivalences.json
+src/topicmodeling/data/acronyms/datos_modelo_es_Mallet_df_merged_14_topics_45_ENTREGABLE_both_text_substituted_equivalences_CON_DUPLICADOS.json
+src/topicmodeling/data/acronyms/df_all_manual_both_equivalences.json
+src/topicmodeling/data/acronyms/synthetic_english_both_equivalences.json
+src/topicmodeling/data/acronyms/synthetic_spanish_both_equivalences.json
+
 
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can

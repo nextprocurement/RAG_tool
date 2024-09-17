@@ -46,26 +46,32 @@ def reorder_acronyms(acronyms_dict):
     return corrected_dict
 
 def substitute_acronyms(row, column_name):
-    text = row[column_name]    
-    if row['Expansions'] != "/":
-        acronyms = row['Acronyms Detected(LLM)'].split(', ')
-        expansions = row['Expansions'].split(', ')
-        
-        # Dict with acronyms and expansions
-        acronyms_dict = dict(zip(acronyms, expansions))
-        # Reorder acronyms
-        if len(acronyms_dict) > 1:
-            acronyms_dict = reorder_acronyms(acronyms_dict)
+    text = row[column_name]
+    try:
+        if row['Expansions'] != "/":
+            acronyms = row['Acronyms Detected(LLM)'].split(', ')
+            expansions = row['Expansions'].split(', ')
+            
+            # Dict with acronyms and expansions
+            acronyms_dict = dict(zip(acronyms, expansions))
+            # Reorder acronyms
+            if len(acronyms_dict) > 1:
+                acronyms_dict = reorder_acronyms(acronyms_dict)
 
-        for acronym, expansion in acronyms_dict.items():
-            if expansion == '/':
-                continue
-            pattern1 = re.compile(r'(?<!\w)' + re.escape(acronym) + r'(?!\w)', re.IGNORECASE)
-            text = pattern1.sub(expansion, text)
-            pattern2 = re.compile(r'\b' + r'\.?'.join(re.escape(char) for char in acronym) + r'\b', re.IGNORECASE)
-            text = pattern2.sub(expansion, text)        
-        return text
-    else:
+            for acronym, expansion in acronyms_dict.items():
+                if expansion == '/':
+                    continue
+                pattern1 = re.compile(r'(?<!\w)' + re.escape(acronym) + r'(?!\w)', re.IGNORECASE)
+                pattern2 = re.compile(r'\b' + r'\.?'.join(re.escape(char) for char in acronym) + r'\b', re.IGNORECASE)
+                
+                # Lambda function to substitute the acronym with its expansion
+                text = pattern1.sub(lambda m: expansion, text)
+                text = pattern2.sub(lambda m: expansion, text)        
+            return text
+        else:
+            return text
+    except Exception as e:
+        logger.error(f"Error processing row {row.name}: {e}")
         return text
 
 def generate_acronym_expansion_json(file_path, output_dir):
@@ -76,12 +82,21 @@ def generate_acronym_expansion_json(file_path, output_dir):
     output_dir: Path to the directory where the JSON file will be saved.
     """
     #Load the Excel file into a DataFrame
-    print(f"Loading excel file from: {file_path}")
-    df_out = pd.read_excel(file_path)
+    print(f"Cargando archivo desde: {file_path}")
+
+    # Obtain the file extension
+    file_extension = os.path.splitext(file_path)[1]
+
+    if file_extension == '.xlsx' or file_extension == '.xls':
+        df_out = pd.read_excel(file_path)
+    elif file_extension == '.parquet':
+        df_out = pd.read_parquet(file_path)
+    else:
+        raise ValueError(f"Formato de archivo no soportado: {file_extension}")
 
     acronym_expansion_dict = {}
     for index, row in df_out.iterrows():
-        print(f"Processing row {index + 1} of {len(df_out)}...")
+        #print(f"Processing row {index + 1} of {len(df_out)}...")
         # Obtain the acronyms and expansions from the DataFrame
         acronyms = row['Acronyms Detected(LLM)'].split(',')
         expansions = row['Expansions'].split(',')
@@ -146,7 +161,8 @@ def process_dataframe(
     ner_analyzer = NERTextAnalyzer()
     
     # Obtain the column name from the configuration file
-    column_name = config.get('data_column_name', 'text')
+    column_name = config['acr']['data_column_name']
+    print("Column name: ", column_name)
 
     # Load the DataFrame based on the file extension
     if path.endswith('.xlsx'):
@@ -173,7 +189,7 @@ def process_dataframe(
         if not text:
             logger.error("La columna especificada no contiene texto. Verifica el archivo YAML.")
             continue
-
+        
         detected_acronyms = set()  # Initialize detected_acronyms as an empty set
 
         # Perform detection if action is "detect" or "both"
@@ -182,41 +198,48 @@ def process_dataframe(
                 prediction = acronym_detector.forward(chunk)
                 acronyms = clean_acronyms(prediction.ACRONYMS)
                 acronyms_list = acronyms.lower().split(',')
-                print("ACRONYMS DETECTED DETECTOR MODULE:", acronyms_list)
+                #print("ACRONYMS DETECTED DETECTOR MODULE:", acronyms_list)
+
+                if not isinstance(detected_acronyms, set):
+                    # Initialize the set of detected acronyms if it is not a set
+                    detected_acronyms = set()
+
+                if isinstance(acronyms_list, str):
+                    acronyms_list = [acronyms_list]
 
                 # Filter detected acronyms
                 detected_acronyms.update(acronym.strip() for acronym in acronyms_list)
                 
                 if not detected_acronyms or '/' in detected_acronyms:
-                    print(f"No acronyms in row {identifier}, continue the loop.")
+                    #print(f"No acronyms in row {identifier}, continue the loop.")
                     df.at[identifier, 'Acronyms Detected(LLM)'] = '/'
                     continue
                     
                 # Apply filters to the detected acronyms
                 detected_acronyms = filter_split_characters(detected_acronyms)
-                print(f"ACRONYMS AFTER filter_split_characters: {detected_acronyms}")
+                #print(f"ACRONYMS AFTER filter_split_characters: {detected_acronyms}")
                 detected_acronyms = filter_items_and_acronyms(detected_acronyms)
-                print(f"ACRONYMS AFTER filter_items_and_acronyms: {detected_acronyms}")
+                #print(f"ACRONYMS AFTER filter_items_and_acronyms: {detected_acronyms}")
                 detected_acronyms = filter_companies(detected_acronyms)
-                print(f"ACRONYMS AFTER filter_companies: {detected_acronyms}")
+                #print(f"ACRONYMS AFTER filter_companies: {detected_acronyms}")
                 detected_acronyms = filter_acronyms_in_text(text, detected_acronyms)
-                print(f"ACRONYMS AFTER filter_acronyms_in_text: {detected_acronyms}")
+                #print(f"ACRONYMS AFTER filter_acronyms_in_text: {detected_acronyms}")
 
                 if not detected_acronyms or '/' in detected_acronyms:
-                    print(f"No acronyms AFTER FILTERING in row {identifier}, continue the loop.")
+                    #print(f"No acronyms AFTER FILTERING in row {identifier}, continue the loop.")
                     df.at[identifier, 'Acronyms Detected(LLM)'] = '/'
                     continue
                 
                 # Convert set to list for NER analysis
                 detected_acronyms_list = list(detected_acronyms)
-                print(f"ACRONYMS BEFORE NER FILTERING: {detected_acronyms_list}")
+                #print(f"ACRONYMS BEFORE NER FILTERING: {detected_acronyms_list}")
                 
                 # Analyze acronyms using NERTextAnalyzer
                 detected_acronyms = ner_analyzer.analyze_text(text, detected_acronyms_list)
-                print(f"Acronyms after ner: {detected_acronyms}")
+                #print(f"Acronyms after ner: {detected_acronyms}")
                 
                 if not detected_acronyms or '/' in detected_acronyms:
-                    print(f"No acronyms AFTER FILTERING in row {identifier}, continue the loop.")
+                    #print(f"No acronyms AFTER FILTERING in row {identifier}, continue the loop.")
                     df.at[identifier, 'Acronyms Detected(LLM)'] = '/'
                     continue
                                 
@@ -231,7 +254,7 @@ def process_dataframe(
                     continue
             
             acronyms_detected = df.at[identifier, 'Acronyms Detected(LLM)']
-            print(f"ACRONYMS DETECTED IN ROW {identifier}: {acronyms_detected}")
+            #print(f"ACRONYMS DETECTED IN ROW {identifier}: {acronyms_detected}")
 
             # Skip the row if acronyms are not detected or contain '/' or are empty
             if acronyms_detected in ['/', '']:
@@ -248,7 +271,7 @@ def process_dataframe(
                     # Expand the acronym using the forward method of AcronymExpanderModule
                     expansion_response = acronym_expander.forward(texto=text, acronimo=acronym)
                     expansion = expansion_response.EXPANSION
-                    print(f"EXPANSION FOR ACRONYM {acronym}: {expansion}")
+                    #print(f"EXPANSION FOR ACRONYM {acronym}: {expansion}")
                     expansions.append(expansion)
                       
                 except Exception as e:
@@ -262,7 +285,10 @@ def process_dataframe(
         return df[[column_name, 'Acronyms Detected(LLM)']]
     elif action in ["complete", "both"]:
         df['text_substituted'] = df.apply(substitute_acronyms, axis=1, args=(column_name,))
-        return df[[column_name,'Acronyms Detected(LLM)','Expansions', 'text_substituted']]
+        df['id_tm'] = range(len(df))
+        df = df.applymap(lambda x: x.replace('\n', ' ').replace('\r', ' ') if isinstance(x, str) else x)
+        
+        return df[[column_name,'Acronyms Detected(LLM)','Expansions', 'text_substituted', 'id_tm']]
     else:
         # Ensure that acronyms have been detected before expanding
         if 'Acronyms Detected(LLM)' not in df.columns or df['Acronyms Detected(LLM)'].isnull().all():

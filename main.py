@@ -8,7 +8,6 @@ from src.utils.utils import generate_acronym_expansion_json
 from src.acronyms.acronym_expander import HermesAcronymExpander
 from src.acronyms.acronym_detector import HermesAcronymDetector
 
-
 def load_config(config_path):
     """
     Load configuration from YAML.
@@ -57,7 +56,8 @@ if __name__ == "__main__":
     # Decide whether to train based on configuration file and arguments
     do_train = getattr(args, 'do_train', False) or config.get('train_all_modules', False)
     # Get the column name from the configuration
-    column_name = config.get('data_column_name', 'text')
+    column_name = config['acr']['data_column_name']
+    print("Column name: ", column_name)
     
     detector = None
     if args.action in ["detect", "both"]:
@@ -197,8 +197,8 @@ if __name__ == "__main__":
     print(df_out.columns)
     # Save the processed DataFrame to an Excel file
     path = pathlib.Path(args.data_path)
-    path_out = path.with_stem(path.stem + suffix).with_suffix('.xlsx')
-    df_out.to_excel(path_out, index=False)
+    path_out = path.with_stem(path.stem + suffix).with_suffix('.parquet')
+    df_out.to_parquet(path_out, index=False)
     # Report the path of the saved file
     logger.info(f"DataFrame procesado con la acción '{args.action}' y guardado en {path_out}")
     
