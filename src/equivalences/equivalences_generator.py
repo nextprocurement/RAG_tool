@@ -937,8 +937,9 @@ class HermesEquivalencesGenerator(object):
         
         df = pd.DataFrame(equivalences, columns= ["origin", "equivalence"])
         
-        df.to_excel("/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/scholar_equivalences_test.xlsx")
-        
+        #df.to_excel("/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/scholar_equivalences_test.xlsx")
+        df.to_excel("/export/usuarios_ml4ds/cggamella/RAG_tool/data/objeto_contrato.xlsx")
+
         # filter empty equivalences
         df = df[df['equivalence'].str.len() > 0]
         print(df.head())

@@ -16,7 +16,7 @@
         "WORDS": "['alto', 'alta', 'altas']",
         "LANGUAGE": "spanish",
         "rationale": "produce the MAPPED_WORDS. We...",
-        "MAPPED_WORDS": "[{'alto': 'alta, altas'}]"
+        "MAPPED_WORDS": "[{'alto': 'alto, alta, altas'}]"
       },
       {
         "augmented": true,

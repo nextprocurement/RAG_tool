@@ -45,7 +45,7 @@ def reorder_acronyms(acronyms_dict):
     corrected_dict = {assigned_expansions[i]: expansions[i] for i in range(len(acronyms)) if assigned_expansions[i] is not None}
     return corrected_dict
 
-def substitute_acronyms(row, column_name):
+def substitute_acronyms(row, column_name, logger = None):
     text = row[column_name]
     try:
         if row['Expansions'] != "/":
@@ -96,7 +96,6 @@ def generate_acronym_expansion_json(file_path, output_dir):
 
     acronym_expansion_dict = {}
     for index, row in df_out.iterrows():
-        #print(f"Processing row {index + 1} of {len(df_out)}...")
         # Obtain the acronyms and expansions from the DataFrame
         acronyms = row['Acronyms Detected(LLM)'].split(',')
         expansions = row['Expansions'].split(',')
@@ -110,7 +109,6 @@ def generate_acronym_expansion_json(file_path, output_dir):
             # Add the acronym and expansion to the dictionary
             if expansion != '/':
                 acronym_expansion_dict[acronym] = expansion
-                #print(f"Añadiendo al diccionario: {acronym} -> {expansion}")
 
     file_name = os.path.splitext(os.path.basename(file_path))[0]
     json_name = f"{file_name}_equivalences.json"
@@ -161,7 +159,7 @@ def process_dataframe(
     ner_analyzer = NERTextAnalyzer()
     
     # Obtain the column name from the configuration file
-    column_name = config['acr']['data_column_name']
+    column_name = config['data_column_name']
     print("Column name: ", column_name)
 
     # Load the DataFrame based on the file extension
@@ -283,8 +281,8 @@ def process_dataframe(
     # Return only the relevant columns based on the action
     if action == "detect":
         return df[[column_name, 'Acronyms Detected(LLM)']]
-    elif action in ["complete", "both"]:
-        df['text_substituted'] = df.apply(substitute_acronyms, axis=1, args=(column_name,))
+    elif action in ["both", "expand"]:
+        df['text_substituted'] = df.apply(substitute_acronyms, axis=1, args=(column_name,logger))
         df['id_tm'] = range(len(df))
         df = df.applymap(lambda x: x.replace('\n', ' ').replace('\r', ' ') if isinstance(x, str) else x)
         

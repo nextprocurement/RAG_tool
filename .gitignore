@@ -125,13 +125,15 @@ celerybeat.pid
 .env
 .venv
 .venv_train
-env/
-venv/
-ENV/
+env
+venv
+ENV
 env.bak/
 venv.bak/
+venv
 .venv_preproc 
 venv_hermes
+venv_nuevo
 
 # Spyder project settings
 .spyderproject
@@ -205,6 +207,10 @@ src/topicmodeling/data/acronyms/datos_modelo_es_Mallet_df_merged_14_topics_45_EN
 src/topicmodeling/data/acronyms/df_all_manual_both_equivalences.json
 src/topicmodeling/data/acronyms/synthetic_english_both_equivalences.json
 src/topicmodeling/data/acronyms/synthetic_spanish_both_equivalences.json
+
+data/NextProcurement/
+data/objeto_contrato.xlsx
+get-pip.py
 
 
 # PyCharm

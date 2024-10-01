@@ -13,7 +13,7 @@ llm:
 
 # ACRONYM Configuration
 acr:
-  data_column_name: "text"  # Define the column name to read, can be 'text', 'title', 'texto_sin_preprocesar', etc...
+  data_column_name: "objective"  # Define the column name to read, can be 'objective','text', 'title', 'texto_sin_preprocesar', etc...
   train_all_modules: false  # If is true, all modules will be trained, if is false, only the modules in the list modules_to_train will be trained
   modules_to_train:  # List of modules to train
     #- HermesAcronymExpander

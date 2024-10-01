@@ -147,6 +147,7 @@ def main():
     logger = init_logger(config['logger'])
     args = parser.parse_args()
 
+    
     if args.mode == "optimized":
         logger.info(f"-- -- Running HERMES pipeline in optimized mode...")
         path_root_save = pathlib.Path(args.save_path) / 'optimized'
@@ -210,7 +211,7 @@ def main():
                 df_out = process_dataframe(
                     path=args.data_path,
                     config=config['acr'],
-                    action="complete",
+                    action="both",
                     acronym_detector=detector.module if detector else None,
                     acronym_expander=expander.module if expander else None,
                     context_window=args.context_window,
@@ -225,6 +226,10 @@ def main():
             logger.info(f"-- -- Acronym Detection and Expansion done in {(time.time() - time_start)/60} minutes. Saving output...")
             df_out.to_parquet(path_save, index=False)
             logger.info(f"-- -- 1. Acronym Detection and Expansion output saved to {path_save.as_posix()}")  
+            logger.info(f"-- -- Generating acronym expansion JSON...")
+            path_sal = '/export/usuarios_ml4ds/cggamella/RAG_tool/src/topicmodeling/data/acronyms/'
+            generate_acronym_expansion_json(path_save, path_sal)
+            logger.info(f"JSON with detected and expanded acronyms saved on {path_sal}")
             
         #***********************************************************************
         # 2. Preprocessing

@@ -32,7 +32,9 @@ from sklearn.preprocessing import normalize
 from spacy.lang.en.stop_words import STOP_WORDS
 from tqdm import tqdm
 from umap import UMAP
-
+import scipy.sparse as sparse
+from scipy.sparse import csr_matrix, hstack
+from src.topicmodeling.tm_model import TMmodel
 from src.topicmodeling.utils import (file_lines, load_processed_data, pickler, tkz_clean_str,
                                       unpickler)
 
@@ -741,6 +743,7 @@ class MalletLdaModel(TopicModel):
         self._logger.info(
             f"-- -- Calculating evaluation metrics..."
         )
+        self._logger.info(f"-- -- Calculating betas using get_betas()...")
         betas = self.get_betas()
         topics = self.print_topics(verbose=False)
         topics_ = [topics[k] for k in topics.keys()]
@@ -749,7 +752,6 @@ class MalletLdaModel(TopicModel):
                 'c_uci': 0,
                 'c_npmi': 0
         }
-
         """
         {
                 'c_v': 0,
@@ -759,23 +761,37 @@ class MalletLdaModel(TopicModel):
         
         """
         
+        self._logger.info(f"-- -- Loading vocabulary...")
+        vocab = self.vocab
+        
         self._logger.info(
             f"-- -- Coherence metrics: {metrics} for {self.num_topics} topics"
         )
-
+        
         # Calculate distributions
         self._logger.info(
             f"-- -- Calculating thetas..."
         )
-
+        # Calculate thetas without sparsification
         thetas = self.get_thetas()
+        
+        self._logger.info(f"-- -- Sparsifying thetas...")
+        thetas_thr = 1e-4 
+        thetas[thetas < thetas_thr] = 0
+        thetas = normalize(thetas, axis=1, norm='l1')
+        thetas_sparse = sparse.csr_matrix(thetas, copy=True)
+        
+        #Calculate alphas
+        self._logger.info(f"-- -- Calculating alphas...")
+        alphas = np.asarray(np.mean(thetas_sparse, axis=0)).ravel()
 
         # Calculate bow
         bow_mat = self.get_bow()
-
-        # Save the model data
-        self.save_results(
-            thetas, betas, self.train_data, metrics, topics, bow_mat, self.vocab, save_model=False)
+        
+        # Create TMmodel object
+        self._logger.info(f"-- -- Creating TMmodel object...")
+        tm = TMmodel(TMfolder=self.save_path / 'TMmodel')
+        tm.create(betas, thetas_sparse, alphas, vocab)
 
         # Extract pipe for later inference
         self._extract_pipe()

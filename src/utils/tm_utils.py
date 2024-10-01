@@ -2,8 +2,7 @@ import os
 import pathlib
 
 from dotenv import load_dotenv
-from src.topicmodeling.topic_model import (BERTopicModel, CtmModel,
-                                           MalletLdaModel, TopicGPTModel)
+from src.topicmodeling.topic_model import (BERTopicModel, CtmModel, MalletLdaModel, TopicGPTModel)
 
 def create_model(model_name, **kwargs):
     # Map model names to corresponding classes
