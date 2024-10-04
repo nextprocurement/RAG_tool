@@ -110,7 +110,7 @@ def main():
     parser.add_argument(
         "--num_topics",
         help="Number of topics",
-        type=str, default="14,15,25,30,50", required=False)
+        type=str, default="12,14,20,25,30,40,50", required=False)
     parser.add_argument(
         "--num_iters",
         help="Number of iterations",
@@ -295,7 +295,7 @@ def main():
         
         file_save = pathlib.Path(args.data_path).stem + '.json'
         path_save_eqs_file = path_save_eqs / file_save
-        
+             
         eq_generator = HermesEquivalencesGenerator(
             use_optimized = True,
             do_train = True,
@@ -350,7 +350,6 @@ def main():
                     print(topics[topic])
             
             path_to_source = model_path / f"{config['equiv']['model_type']}_{config['equiv']['num_topics']}" / "vocabulary.txt" if args.source_eq == "vocabulary" else model_path / f"{config['equiv']['model_type']}_{config['equiv']['num_topics']}"
-            
             logger.info(f"-- -- Generating equivalences from vocabulary...")
             eq_generator.generate_equivalences(
                 source = args.source_eq,
@@ -360,7 +359,7 @@ def main():
                 language = args.lang,
                 top_k = config['equiv']['top_k'],
             )
-            
+
             logger.info(f"-- -- Equivalences saved to {this_path_save_eqs}")
         
         elif args.source_eq == "tm":
@@ -412,7 +411,8 @@ def main():
                             print(topics[topic])
                     
                     path_to_source = model_path / f"{config['equiv']['model_type']}_{config['equiv']['num_topics']}" / "vocabulary.txt" if args.source_eq == "vocabulary" else model_path / f"{config['equiv']['model_type']}_{config['equiv']['num_topics']}"
-            
+
+
                     logger.info(f"-- -- Generating equivalences from {args.source_eq}...")
                     eq_generator.generate_equivalences(
                         source = args.source_eq,
@@ -424,6 +424,7 @@ def main():
                     )
 
                     logger.info(f"-- -- Equivalences saved to {this_path_save_eqs}")
+
         else:
             logger.error(f"-- -- Source of equivalences not recognized. Please provide a valid source.")
             return
@@ -471,12 +472,12 @@ def main():
             
             for model_type in models:
                 
-                model_path_complete = model_path / f"{model_type}_{num_topics}"
+                #model_path_complete = model_path / f"{model_type}_{num_topics}"
                 
-                if model_path_complete.exists():
-                    logger.info(f"-- -- Model output already exists at {model_path_complete}")
-                else:
-                    logger.info(f"-- -- Model output does not exist at {model_path}. Training model...")
+                #if model_path_complete.exists():
+                #    logger.info(f"-- -- Model output already exists at {model_path_complete}")
+                #else:
+                #    logger.info(f"-- -- Model output does not exist at {model_path}. Training model...")
                 
                     if model_type == 'Ctm':
                         this_args.num_iters = 50

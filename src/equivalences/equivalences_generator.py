@@ -707,9 +707,7 @@ class HermesEquivalencesGenerator(object):
             print(f'Davies-Bouldin Index: {dbi:.2f}')
         else:
             print("Silhouette Score: No se puede calcular con solo un cluster.")
-            
-        #import pdb; pdb.set_trace()
-        
+                    
         # Map words to clusters
         cluster_to_words = defaultdict(list)
         for word, label in zip(words, labels):
@@ -900,8 +898,14 @@ class HermesEquivalencesGenerator(object):
             params_inference = tm_params
             params_inference['load_model'] = True
             params_inference['model_path'] = path_to_source
-            params_inference['mallet_path'] = "/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/src/topicmodeling/Mallet-202108/bin/mallet"
-
+            #params_inference['mallet_path'] = "/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/src/topicmodeling/Mallet-202108/bin/mallet"
+            params_inference['mallet_path'] = "/export/usuarios_ml4ds/cggamella/RAG_tool/src/topicmodeling/Mallet-202108/bin/mallet"
+            
+            #print("El modelo es", model_type)
+            #print("Los parametros son", params_inference)
+            #print("Antes de llamar a create_model")
+            #import pdb; pdb.set_trace()
+            
             model = create_model(model_type, **params_inference)
             topics = model.print_topics(top_k=top_k)
             # keep top-k words from each topic

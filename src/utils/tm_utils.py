@@ -22,7 +22,7 @@ def create_model(model_name, **kwargs):
 
     # Create an instance of the model class
     model_instance = model_class(**kwargs)
-
+    
     return model_instance
 
 def train_model(

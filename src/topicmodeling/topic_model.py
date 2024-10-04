@@ -77,8 +77,9 @@ class TopicModel(ABC):
             self._logger = logging.getLogger('TopicModel')
 
         self.load_model = load_model
-
+        
         self.save_path = pathlib.Path(model_path)
+        
         # Path to save the "results" dictionary
         self.results_path = self.save_path / "results.pkl"
         # Path to saev the "model" object (if necessary)
@@ -226,7 +227,6 @@ class TopicModel(ABC):
             
             vocabulary = set([dict[idx] for idx in range(len(dict))])
             self._logger.info(f"-- -- Vocabulary size: {len(vocabulary)}")
-            #import pdb; pdb.set_trace()
             df["lemmas"] = df['lemmas'].apply(lambda x: ' '.join([el for el in x.split() if el in vocabulary]))
             
             # Save Gensim dictionary
@@ -361,7 +361,7 @@ class TopicModel(ABC):
                 return coherence_model.get_coherence()
             except Exception as e:
                 print(e)
-                import pdb; pdb.set_trace()
+                #import pdb; pdb.set_trace()
 
         if all:
             return {
@@ -438,6 +438,7 @@ class TopicModel(ABC):
     def save_results(
         self,
         thetas: np.ndarray,
+        alphas: np.ndarray,
         betas: np.ndarray,
         train_data: np.ndarray,
         cohrs: Dict,
@@ -453,6 +454,8 @@ class TopicModel(ABC):
         ----------
         thetas : np.ndarray
             Document-topic distribution.
+        alphas : np.ndarray
+            Topic distribution per document 
         betas : np.ndarray
             Word-topic distribution.
         train_data : List[List[str]]
@@ -480,6 +483,7 @@ class TopicModel(ABC):
             key: value for key, value in {
                 "num_topics": self.num_topics,
                 "thetas": thetas,
+                "alphas": alphas,
                 "betas": betas,
                 "train_data": train_data,
                 "topics": topics,
@@ -489,7 +493,6 @@ class TopicModel(ABC):
                 **coherence_values
             }.items() if value is not None
         }
-
         # Save the results to a file
         pickler(self.results_path, results)
 
@@ -526,6 +529,7 @@ class TopicModel(ABC):
 
         self.num_topics = self.loaded_data.get("num_topics")
         self.thetas = self.loaded_data.get("thetas")
+        self.alphas = self.loaded_data.get("alphas")
         self.betas = self.loaded_data.get("betas")
         self.topics = self.loaded_data.get("topics")
         self.second_topics = self.loaded_data.get("second_topics")
@@ -597,7 +601,7 @@ class MalletLdaModel(TopicModel):
 
         # Initialize the TopicModel class
         super().__init__(
-            num_topics, topn, load_data_path, load_model, model_path, self._logger)
+            num_topics=num_topics, topn=topn, load_data_path=load_data_path, load_model=load_model, model_path=model_path, logger=self._logger)
 
         # Initialize specific parameters for Mallet LDA
         self.mallet_path = pathlib.Path(mallet_path)
@@ -791,8 +795,14 @@ class MalletLdaModel(TopicModel):
         # Create TMmodel object
         self._logger.info(f"-- -- Creating TMmodel object...")
         tm = TMmodel(TMfolder=self.save_path / 'TMmodel')
-        tm.create(betas, thetas_sparse, alphas, vocab)
-
+        tm.create(betas=betas, thetas=thetas_sparse, alphas=alphas, vocab=vocab)
+        
+        self._logger.info(f"-- -- Saving model results...")
+        # Save results
+        self.save_results(
+            thetas = thetas_sparse, alphas=alphas, betas=betas, train_data=self.train_data, cohrs=metrics, topics=topics, bow_mat=bow_mat, vocab=self.vocab, save_model=False)
+        self._logger.info(f"-- -- Model results saved.")
+        
         # Extract pipe for later inference
         self._extract_pipe()
 

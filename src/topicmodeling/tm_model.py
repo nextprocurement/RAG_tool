@@ -95,7 +95,11 @@ class TMmodel(object):
             '-- -- -- Topic model object (TMmodel) successfully created')
 
     def create(self, betas=None, thetas=None, alphas=None, vocab=None):
-        """Creates the topic model from the relevant matrices that characterize it. In addition to the initialization of the corresponding object's variables, all the associated variables and visualizations which are computationally costly are calculated so they are available for the other methods.
+        """
+        Creates the topic model from the relevant matrices that characterize it.
+        In addition to the initialization of the corresponding object's variables,
+        all the associated variables and visualizations which are computationally costly
+        are calculated so they are available for the other methods.
 
         Parameters
         ----------
@@ -146,7 +150,7 @@ class TMmodel(object):
         self._tpc_descriptions = [el[1]
                                   for el in self.get_tpc_word_descriptions()]
         self._logger.info("-- -- descriptions")
-        #self.calculate_gensim_dic()
+        self.calculate_gensim_dic()
         #self.calculate_topic_coherence()  # cohrs_aux
         #self._tpc_labels = [el[1] for el in self.get_tpc_labels()]
         #self._tpc_embeddings = self.get_tpc_word_descriptions_embeddings()
@@ -385,10 +389,15 @@ class TMmodel(object):
                 self._TMfolder.joinpath('topic_entropy.npy'))
 
     def calculate_gensim_dic(self):
-
+        
         # TODO: Check this is working when Mallet is not being used
-        corpusFile = self._TMfolder.parent.parent.joinpath(
-            'train_data/corpus.txt')
+        corpusFile = self._TMfolder.parent.joinpath(
+            'modelFiles/corpus.txt')
+        self._logger.info(f"Buscando corpus.txt en: {corpusFile}")
+        
+        if not corpusFile.exists():
+            self._logger.error(f"El archivo {corpusFile} no existe.")
+            return
 
         with corpusFile.open("r", encoding="utf-8") as f:
             corpus = [line.rsplit(" 0 ")[1].strip().split() for line in f.readlines(
