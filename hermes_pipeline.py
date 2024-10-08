@@ -100,7 +100,7 @@ def main():
     parser.add_argument(
         "--times_equiv",
         action='store_true',
-        default=3,
+        default=1, # For final models fix to 3
         help="Number of times to run the equivalence detection"
     )
         
@@ -110,7 +110,7 @@ def main():
     parser.add_argument(
         "--num_topics",
         help="Number of topics",
-        type=str, default="12,14,20,25,30,40,50", required=False)
+        type=str, default="12,14,20,25", required=False)
     parser.add_argument(
         "--num_iters",
         help="Number of iterations",

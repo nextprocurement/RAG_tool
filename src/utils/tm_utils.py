@@ -61,6 +61,8 @@ def train_model(
 
     # Create a model instance of type args.model_type
     model = create_model(model_type, **params)
+    #print("La lista de STOPS está:", stw_path)
+    #import pdb; pdb.set_trace()
 
     # Train the model
     model.train(further_proc=further_proc, stops_path=stw_path, eqs_path=eq_path)

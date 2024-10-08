@@ -35,7 +35,7 @@ from umap import UMAP
 import scipy.sparse as sparse
 from scipy.sparse import csr_matrix, hstack
 from src.topicmodeling.tm_model import TMmodel
-from src.topicmodeling.utils import (file_lines, load_processed_data, pickler, tkz_clean_str,
+from src.topicmodeling.utils import (file_lines, load_processed_data, pickler,generate_dynamic_stopwords, tkz_clean_str,
                                       unpickler)
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -198,11 +198,18 @@ class TopicModel(ABC):
         df = load_processed_data(self.load_data_path)
                 
         if further_proc: # remove add stops and equivs
+            # Generate stopwords based on TF-IDF
+            self._logger.info(f"-- -- Generando stopwords basadas en TF-IDF con umbral dinámico")
+            texts = df['lemmas'].tolist()
+            stopwords_tfidf = generate_dynamic_stopwords(texts, percentage_below_mean=0.2)
+            self._logger.info(f"-- -- The number of stopwords is {len(stopwords_tfidf)} based on TF-IDF")
+            
             start_time = time.time()
             self._logger.info(f"-- -- Applying further processing to the data")
-            df['lemmas'] = df['lemmas'].apply(lambda row: tkz_clean_str(row, stops_path, eqs_path))
+            df['lemmas'] = df['lemmas'].apply(lambda row: tkz_clean_str(row, stops_path=stops_path, eqs_path=eqs_path, stopwords_tfidf=stopwords_tfidf))
             self._logger.info(f"-- -- Further processing done in {(time.time() - start_time) / 60} minutes. Saving to {preproc_file}")
-                    
+            import pdb; pdb.set_trace()
+            
             # filter words with less than 3 characters
             self._logger.info(f"-- -- Filtering out words with less than 3 characters")
             df["lemmas"] = df['lemmas'].apply(lambda x: ' '.join([el for el in x.split() if len(el) > 3]))  # remove short words

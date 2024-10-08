@@ -2,6 +2,8 @@ import json
 import pathlib
 import pickle
 import pandas as pd
+import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 def unpickler(file: str):
     """Unpickle file"""
@@ -46,16 +48,44 @@ def file_lines(fname):
             pass
     return i + 1
 
+def generate_dynamic_stopwords(texts, percentage_below_mean=0.2):
+    """
+    Generate a list of stopwords based on the TF-IDF scores of the words in the texts.
+
+    Args:
+        texts (list of str): 
+        percentage_below_mean (float): Percetage of words below the mean TF-IDF score to consider as stopwords.
+
+    Returns:
+        list: List of stopwords based on the TF-IDF scores of the words in the texts.
+    """
+    vectorizer = TfidfVectorizer()
+    vectorizer.fit(texts)
+    feature_names = vectorizer.get_feature_names_out()
+    idf_values = vectorizer.idf_
+
+    mean_idf = np.mean(idf_values)
+    threshold = mean_idf * (1 - percentage_below_mean)
+
+    # Generate list of stopwords
+    stopwords_tfidf = [word for word, idf in zip(feature_names, idf_values) if idf <= threshold]
+    #print("La lista de stopwords es:", stopwords_tfidf)
+    #print("La longitud de stopwords es:", len(stopwords_tfidf))
+    #import pdb; pdb.set_trace()
+
+    return stopwords_tfidf
+
 def tkz_clean_str(
-    rawtext,
+    row,
     stops_path="src/topicmodeling/data/stops",
-    eqs_path="src/topicmodeling/data/equivalences"
+    eqs_path="src/topicmodeling/data/equivalences",
+    stopwords_tfidf=None
 ):
     """Function to carry out tokenization and cleaning of text
 
     Parameters
     ----------
-    rawtext: str
+    row: str
         string with the text to lemmatize
 
     Returns
@@ -135,11 +165,11 @@ def tkz_clean_str(
     stopwords = _loadSTW(stops_path=stops_path)
     equivalences = _loadEQ(eqs_path=eqs_path)
     
-    if rawtext == None or rawtext == '':
+    if row == None or row == '':
         return ''
     else:
         # lowercase and tokenization (similar to Spark tokenizer)
-        cleantext = rawtext.lower().split()
+        cleantext = row.lower().split()
         # remove stopwords
         cleantext = [
             el for el in cleantext if el not in stopwords]
@@ -149,5 +179,9 @@ def tkz_clean_str(
         # remove stopwords again, in case equivalences introduced new stopwords
         cleantext = [
             el for el in cleantext if el not in stopwords]
+        
+        # Remove stopwords based on TF-IDF
+        if stopwords_tfidf is not None:
+            cleantext = [word for word in cleantext if word not in stopwords_tfidf]
 
     return ' '.join(cleantext)

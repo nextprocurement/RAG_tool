@@ -192,6 +192,8 @@ src/acronyms/expander_pruebas.py
 src/acronyms/detector_pruebas.py
 
 data/topic_labeller_tr_data.xlsx
+data/integracion_STOPS/
+src/topicmodeling/data/acronyms/in_text_score_mas_0_65_y_slash_remove_1000_equivalences.json
 src/acronyms/dev_data.xlsx
 src/acronyms/test_data.xlsx
 src/acronyms/train_data.xlsx
@@ -211,6 +213,7 @@ src/topicmodeling/data/acronyms/synthetic_spanish_both_equivalences.json
 data/NextProcurement/
 data/objeto_contrato.xlsx
 get-pip.py
+hist_idf_scholar.png
 
 
 # PyCharm
