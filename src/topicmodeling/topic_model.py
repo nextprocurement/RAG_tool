@@ -5,6 +5,7 @@ import pathlib
 import re
 import shutil
 import sys
+import random
 from abc import ABC, abstractmethod
 from multiprocessing import freeze_support
 from subprocess import check_output
@@ -198,17 +199,19 @@ class TopicModel(ABC):
         df = load_processed_data(self.load_data_path)
                 
         if further_proc: # remove add stops and equivs
-            # Generate stopwords based on TF-IDF
-            self._logger.info(f"-- -- Generando stopwords basadas en TF-IDF con umbral dinámico")
+            self._logger.info(f"-- -- Generating stopwords based on TF-IDF with dynamic threshold")
             texts = df['lemmas'].tolist()
             stopwords_tfidf = generate_dynamic_stopwords(texts, percentage_below_mean=0.2)
             self._logger.info(f"-- -- The number of stopwords is {len(stopwords_tfidf)} based on TF-IDF")
+            # Save stopwords 
+            stopwords_file = self.save_path / "stopwords_tfidf.txt"
+            with stopwords_file.open("w", encoding="utf8") as f:
+                f.write("\n".join(stopwords_tfidf))
             
             start_time = time.time()
             self._logger.info(f"-- -- Applying further processing to the data")
             df['lemmas'] = df['lemmas'].apply(lambda row: tkz_clean_str(row, stops_path=stops_path, eqs_path=eqs_path, stopwords_tfidf=stopwords_tfidf))
             self._logger.info(f"-- -- Further processing done in {(time.time() - start_time) / 60} minutes. Saving to {preproc_file}")
-            import pdb; pdb.set_trace()
             
             # filter words with less than 3 characters
             self._logger.info(f"-- -- Filtering out words with less than 3 characters")
@@ -326,8 +329,9 @@ class TopicModel(ABC):
         self,
         ref_text: List[List[str]],
         keys: List[str],
-        metric='c_npmi',
-        all=False
+        metric='c_v',
+        all=False,
+        sample_percentage=0.5
     ) -> Union[float, Dict]:
         """
         Calculate the coherence score for the topic model
@@ -339,7 +343,7 @@ class TopicModel(ABC):
         keys : List[str]
             List of keywords for each topic
         metric : str, optional
-            The coherence metric to use, by default 'c_npmi'
+            The coherence metric to use, by default 'c_v'
 
         Returns
         -------
@@ -353,14 +357,21 @@ class TopicModel(ABC):
         '''
         def filter_unseen_tokens(keys, dictionary):
             """Filter out tokens from each topic in `keys` that aren't in the `dictionary`."""
-            return [[word for word in topic if word in dictionary.token2id] for topic in keys]
+            filtered_keys = [[word for word in topic if word in dictionary.token2id] for topic in keys]
+            return [topic for topic in filtered_keys if len(topic) > 0]
+        
+        def subsample_corpus(ref_text, percentage=0.5):
+            sample_size = int(len(ref_text) * percentage)
+            return random.sample(ref_text, sample_size)
+        
+        ref_text_sample = subsample_corpus(ref_text, percentage=sample_percentage)
 
-        def get_score(ref_text, keys, metric):
-            dictionary = Dictionary(ref_text)
+        def get_score(ref_text_sample, keys, metric):
+            dictionary = Dictionary(ref_text_sample)
             filtered_keys = filter_unseen_tokens(keys, dictionary)
             coherence_model = CoherenceModel(
                 topics=filtered_keys,
-                texts=ref_text,
+                texts=ref_text_sample,
                 dictionary=dictionary,
                 coherence=metric
             )
@@ -369,15 +380,18 @@ class TopicModel(ABC):
             except Exception as e:
                 print(e)
                 #import pdb; pdb.set_trace()
+        
+        dictionary = Dictionary(ref_text_sample)
+        filtered_keys = filter_unseen_tokens(keys, dictionary)
 
         if all:
             return {
-                'c_v': get_score(ref_text, keys, 'c_v'),
-                'c_uci': get_score(ref_text, keys, 'c_uci'),
-                'c_npmi': get_score(ref_text, keys, 'c_npmi')
+                'c_v': get_score(ref_text_sample, filtered_keys, 'c_v'),
+                'c_uci': get_score(ref_text_sample, filtered_keys, 'c_uci'),
+                'c_npmi': get_score(ref_text_sample, filtered_keys, 'c_npmi')
             }
         else:
-            return get_score(ref_text, keys, metric)
+            return get_score(ref_text_sample, filtered_keys, metric)
 
     def get_bow(
         self
@@ -763,14 +777,13 @@ class MalletLdaModel(TopicModel):
                 'c_uci': 0,
                 'c_npmi': 0
         }
-        """
-        {
-                'c_v': 0,
-                'c_uci': 0,
-                'c_npmi': 0
-            } #self.get_coherence(self.train_data, topics_, all=True)
-        
-        """
+        #print("Las métricas de coherencia inicializadas son:", metrics)
+        #import pdb; pdb.set_trace()
+        #self._logger.info(f"-- -- Calculating coherence using get_coherence()...")
+        #print("El train data es: ", self.train_data)
+        #print("Empieza a calcular la coherencia...")
+        #coherence = self.get_coherence(self.train_data, topics_, all=False)
+        #print("La coherencia es: ", coherence)
         
         self._logger.info(f"-- -- Loading vocabulary...")
         vocab = self.vocab
@@ -807,7 +820,7 @@ class MalletLdaModel(TopicModel):
         self._logger.info(f"-- -- Saving model results...")
         # Save results
         self.save_results(
-            thetas = thetas_sparse, alphas=alphas, betas=betas, train_data=self.train_data, cohrs=metrics, topics=topics, bow_mat=bow_mat, vocab=self.vocab, save_model=False)
+            thetas = thetas_sparse, alphas=alphas, betas=betas, train_data=self.train_data, cohrs=coherence, topics=topics, bow_mat=bow_mat, vocab=self.vocab, save_model=False)
         self._logger.info(f"-- -- Model results saved.")
         
         # Extract pipe for later inference

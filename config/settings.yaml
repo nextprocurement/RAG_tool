@@ -27,8 +27,8 @@ preproc:
   lang : "es"
 
 equiv:
-  num_topics : 100
+  num_topics : 10 # before set to 100
   further_proc: True
   model_type: "MalletLda"
   language : "spanish"
-  top_k : 100
+  top_k : 50 # before set to 100

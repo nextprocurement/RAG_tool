@@ -870,7 +870,7 @@ class HermesEquivalencesGenerator(object):
         language: str = "es",
         path_save: str = "/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/src/topicmodeling/data/equivalences/cpv45_equivalences_test_vocab.json",
         optim: bool = False,
-        top_k: int = 100
+        top_k: int = 100 
     ):
         """
         Generate equivalences for the given words and language.
