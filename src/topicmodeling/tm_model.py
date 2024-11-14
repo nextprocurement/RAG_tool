@@ -484,13 +484,12 @@ class TMmodel(object):
         measure_name = f"{coherence_measure}_win{window_size}_top{top_n}"
         return measure_name
     
-    # NEW  -- Function to calculate the coherence of the topics -- 
+    # NEW  -- Function to calculate the coherence of the topics -- Nov 2024
     def calculate_topic_coherence(self, coherence_measure, top_n, file_path):
         '''
         This function calculates the coherence of the topics using the Gensim CoherenceModel.
         
         Parameters:
-            - reference_text: text dump from the wikipedia for spanish text coherence calculation
             - coherence_measure: name of the coherence measure to use (c_v, c_npmi)
             - top_n: number of words to consider in the coherence calculation
             - file_path: path to the file with the reference text from wikipedia 
@@ -527,9 +526,6 @@ class TMmodel(object):
             self._logger.info(f"Coherencia media calculada: {mean}")
             # Guardar las coherencias de los tópicos
             self._topic_coherence = confirmed_measures
-            #self._save_cohr() # Ya se guarda en el método _save_all()
-            print("Dentro del cáculo de la coherencia")
-            import pdb; pdb.set_trace()
             
         except ZeroDivisionError as e:
             self._logger.error(f"Error al calcular coherencia: {e}")
