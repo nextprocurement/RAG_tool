@@ -1,19 +1,27 @@
 """This module is similar to the one available in the topicmodeler (https://github.com/IntelCompH2020/topicmodeler/blob/main/src/topicmodeling/manageModels.py). It provides a generic representation of all topic models used for curation purposes.
 
-Authors: Jerónimo Arenas-García, J.A. Espinosa-Melchor, Lorena Calvo-Bartolomé
+Authors: Jerónimo Arenas-García, J.A. Espinosa-Melchor, Lorena Calvo-Bartolomé, Carlos González Gamella
 Modifed: 24/01/2024 (Updated for NP-Solr-Service (NextProcurement Proyect))
 Modified: 11/02/2024 (Updated for NP-Search-Tool (NextProcurement Proyect) to include topic labelling method based on OpenAI's GPT-X models)
+Modified: 12/11/2024 (Updated coherence calculation with refence text dumped from the wikipedia for spanish text coherence calculation)
 """
 
 import shutil
 import warnings
 from pathlib import Path
 import os
-
-import numpy as np
+from tqdm import tqdm
 import pandas as pd
+import numpy as np
+import gzip
+import xml.etree.ElementTree as ET
+#from gensim.models.coherencemodel import CoherenceModel
+#from gensim.corpora import Dictionary
+from gensim.models import CoherenceModel
+from gensim.corpora import Dictionary
 import scipy.sparse as sparse
 from sparse_dot_topn import awesome_cossim_topn
+#from gensim.models.coherencemodel import CoherenceModel
 #from src.Embeddings.embedder import Embedder
 #from topic_labeller import TopicLabeller
 
@@ -94,6 +102,15 @@ class TMmodel(object):
 
         self._logger.info(
             '-- -- -- Topic model object (TMmodel) successfully created')
+    
+    def get_mean_coherence(self):
+        return self.mean_coherence
+
+    def get_topic_coherences(self):
+        return self.topic_coherences
+
+    def get_measure_name(self):
+        return self.measure_name
 
     def create(self, betas=None, thetas=None, alphas=None, vocab=None):
         """
@@ -153,9 +170,27 @@ class TMmodel(object):
         self._logger.info("-- -- descriptions")
         self.calculate_gensim_dic()
         print("Coherence al crear el TMmodel:")
-        import pdb; pdb.set_trace()
-        print("Calculando solo c_v..")
-        self.calculate_topic_coherence(metrics=["c_v"])  # cohrs_aux
+        # Parámetros para calcular coherencia
+        coherence_measure = 'c_v'  
+        top_n = 15  
+        file_path = "/export/usuarios_ml4ds/cggamella/RAG_tool/data/dump/eswiki-latest-abstract.xml.gz"
+
+        self._logger.info("Calculando la coherencia...")
+        measure_name, mean_coherence, topic_coherences = self.calculate_topic_coherence(
+            coherence_measure=coherence_measure,
+            top_n=top_n,
+            file_path=file_path
+        )
+        
+        self.measure_name = measure_name
+        self.mean_coherence = mean_coherence
+        self.topic_coherences = topic_coherences
+
+        # Loguear resultados de coherencia
+        print(f"Measure Name: {self.measure_name}")
+        print(f"Mean Coherence: {self.mean_coherence}")
+        print(f"Topic Coherences: {self.topic_coherences}")
+ 
         #self._tpc_labels = [el[1] for el in self.get_tpc_labels()]
         #self._tpc_embeddings = self.get_tpc_word_descriptions_embeddings()
         self._calculate_sims()
@@ -406,11 +441,11 @@ class TMmodel(object):
         with corpusFile.open("r", encoding="utf-8") as f:
             corpus = [line.rsplit(" 0 ")[1].strip().split() for line in f.readlines()
                       if line.rsplit(" 0 ")[1].strip().split() != []]
-
+        
         # Import necessary modules for coherence calculation with Gensim
         from gensim.corpora import Dictionary
         from gensim.models.coherencemodel import CoherenceModel
-
+        
         # Create dictionary
         dictionary = Dictionary(corpus)
 
@@ -424,120 +459,167 @@ class TMmodel(object):
                 '\n'.join([dictionary[idx] for idx in range(len(dictionary))]))
 
         return
+    
+    def _load_reference_text(self, file_path, limit=1500000):
+        """
+        Load reference text dump from wikipedia for coherence calculation.
+        Abstract <tag> text from the wikipedia dump is used for coherence calculation.
+        """
+        reference_text = []
+        with gzip.open(file_path, 'rt', encoding='utf-8') as f:
+            tree = ET.parse(f)
+            root = tree.getroot()
+            for doc in root.findall("doc"):
+                abstract = doc.find("abstract").text or ""
+                if abstract:
+                    reference_text.append(abstract.split())
+                if len(reference_text) >= limit:
+                    break
+        return reference_text
 
-    def calculate_topic_coherence(self, metrics=["c_v", "c_npmi"], n_words=15, only_one=True):
+    def _gen_measure_name(self,coherence_measure, window_size, top_n):
+        """
+        Make a unique measure name from the arguments
+        """
+        measure_name = f"{coherence_measure}_win{window_size}_top{top_n}"
+        return measure_name
+    
+    # NEW  -- Function to calculate the coherence of the topics -- 
+    def calculate_topic_coherence(self, coherence_measure, top_n, file_path):
+        '''
+        This function calculates the coherence of the topics using the Gensim CoherenceModel.
+        
+        Parameters:
+            - reference_text: text dump from the wikipedia for spanish text coherence calculation
+            - coherence_measure: name of the coherence measure to use (c_v, c_npmi)
+            - top_n: number of words to consider in the coherence calculation
+            - file_path: path to the file with the reference text from wikipedia 
+        
+        Return:
+            - Name of coherence model (str).
+            - Mean coherence of the topics (float).
+            - List of individual coherences for each topic (list).
+        '''
 
-        # Load topic information
+        self._logger.info("Starting coherence calculation {coherence_measure}...")
+
+        # Load chemical descriptions of the topics
         if self._tpc_descriptions is None:
-            print("No entra..")
-            self._tpc_descriptions = [el[1]
-                                      for el in self.get_tpc_word_descriptions()]
+            # Get the topic descriptions as strings
+            self._tpc_descriptions = [el[1] for el in self.get_tpc_word_descriptions(n_words=top_n)]
 
-        # Convert topic information into list of lists
-        tpc_descriptions_ = \
-            [tpc.split(', ') for tpc in self._tpc_descriptions]
-        print("Descripciones de tópicos convertidas en lista de listas.", tpc_descriptions_)
-        import pdb; pdb.set_trace()
-
-        # Get texts to calculate coherence
-        #tm_folder_path = self._TMfolder.parent
-        # Imprimir la ruta a la que apunta self._TMfolder.parent
-        #print(f"Ruta de self._TMfolder: {tm_folder_path}")
-        #import pdb; pdb.set_trace()
+        # Convert topic descriptions to lists of words
+        topics_ = [desc.split(', ')[:top_n] for desc in self._tpc_descriptions]
+        self._logger.info("Topic descriptions converted to lists.")
+        reference_text = self._load_reference_text(file_path)
+        vocab = Dictionary(reference_text)
+        self._logger.info("Dictionary created from reference text.")
         
-        # Get texts to calculate coherence      
-        self._logger.info("--- Calculating coherence with corpus data.")
-        corpusFile = self._TMfolder.parent.joinpath(
-            'modelFiles/corpus.txt')
-        print("El corpusFile es:", corpusFile)
-        import pdb; pdb.set_trace()
-                
-        with open(corpusFile, "r", encoding="utf-8") as f:
-                lines = f.readlines()  # Read all lines into a list
-                f.seek(0)  # Reset the file pointer to the beginning
+        try:
+            cm = CoherenceModel(
+                topics=topics_,
+                texts=tqdm(reference_text),
+                dictionary=vocab,
+                coherence=coherence_measure,
+            )
+            confirmed_measures = cm.get_coherence_per_topic()        
+            mean = cm.aggregate_measures(confirmed_measures)
+            self._logger.info(f"Coherencia media calculada: {mean}")
+            # Guardar las coherencias de los tópicos
+            self._topic_coherence = confirmed_measures
+            #self._save_cohr() # Ya se guarda en el método _save_all()
+            print("Dentro del cáculo de la coherencia")
+            import pdb; pdb.set_trace()
+            
+        except ZeroDivisionError as e:
+            self._logger.error(f"Error al calcular coherencia: {e}")
+            #confirmed_measures = ['inf' if x == float('inf') else x for x in confirmed_measures]
+            confirmed_measures = [float('inf') if x == float('inf') else x for x in confirmed_measures]
+            mean = float('nan')
+            self._topic_coherence = confirmed_measures
+            #self._save_cohr() # Ya se guarda en el método _save_all()
+
+        measure_name = self._gen_measure_name(coherence_measure, cm.window_size, top_n)
+        return measure_name, float(mean), [float(i) for i in confirmed_measures]
+    
+    '''
+    def xx_calclate_topic_coherence(self, coherence_measure='c_v', top_n=10):
+        
+        # Cargar las descripciones de los tópicos
+        if self._tpc_descriptions is None:
+            self._tpc_descriptions = [el[1] for el in self.get_tpc_word_descriptions(n_words=top_n)]
+
+        topics = [tpc.split(', ') for tpc in self._tpc_descriptions]
+        self._logger.info(f"Descripciones de tópicos convertidas en listas.")
+        
+
+        # Cargar el corpus directamente
+        self._logger.info("--- Calculando coherencia con datos del corpus.")
+        corpus_file = self._TMfolder.parent.joinpath('modelFiles', 'corpus.txt')
+        self._logger.info(f"Cargando corpus desde: {corpus_file}")
+
+        try:
+            with open(corpus_file, "r", encoding="utf-8") as f:
+                lines = f.readlines()
                 try:
-                    corpus = [line.rsplit(" 0 ")[1].strip().split() for line in lines]
-                except:
-                    corpus = [line.rsplit("\t0\t")[1].strip().split() for line in lines]
+                    reference_text = [line.rsplit(" 0 ")[1].strip().split() for line in lines]
+                except IndexError:
+                    reference_text = [line.rsplit("\t0\t")[1].strip().split() for line in lines]
+            self._logger.info("Corpus cargado correctamente.")
+        except FileNotFoundError:
+            self._logger.error(f"No se encontró el archivo de corpus en {corpus_file}")
+            return
         
-        print("Corpus cargado.")
-        import pdb; pdb.set_trace()
 
-        # Import necessary modules for coherence calculation with Gensim
+        # Importar módulos necesarios de Gensim
         from gensim.corpora import Dictionary
         from gensim.models.coherencemodel import CoherenceModel
 
-        # Get Gensim dictionary
+        # Cargar el diccionario directamente
         dictionary = None
-        if self._TMfolder.parent.joinpath('dictionary.gensim').is_file():
+        dict_file = self._TMfolder.parent.joinpath('dictionary.gensim')
+        if dict_file.is_file():
             try:
-                dictionary = Dictionary.load_from_text(
-                    self._TMfolder.parent.joinpath('dictionary.gensim').as_posix())
-                print("Diccionario Gensim cargado.") # Pasa por aqui
-                print("El diccionario es:", dictionary)
-            except:
-                self._logger.warning(
-                    "Gensim dictionary could not be load from vocabulary file.")
+                dictionary = Dictionary.load_from_text(dict_file.as_posix())
+                self._logger.info("Diccionario Gensim cargado.")
+            except Exception as e:
+                self._logger.warning(f"No se pudo cargar el diccionario Gensim: {e}")
+                dictionary = Dictionary(reference_text)
+                self._logger.info("Diccionario Gensim creado a partir del corpus.")
         else:
-            print("Diccionario Gensim no encontrado. Creando diccionario..")
-            import pdb; pdb.set_trace()
-            if dictionary is None:
-                dictionary = Dictionary(corpus)
+            self._logger.info("Diccionario Gensim no encontrado. Creando diccionario...")
+            dictionary = Dictionary(reference_text)
+            self._logger.info("Diccionario Gensim creado a partir del corpus.")
 
-        if n_words > len(tpc_descriptions_[0]):
-            print("ERROR, El número de palabras por tópico debe ser igual a n_words.")
-            import pdb; pdb.set_trace()
-            self.logger.error(
-                '-- -- -- Coherence calculation failed: The number of words per topic must be equal to n_words.')
-        
-        else:
-            if only_one:
-                print("Calculando solo una coherencia..") # Pasa por aqui
-                import pdb; pdb.set_trace()
-                metric = metrics[0]
-                print("Métrica:", metric)
-                import pdb; pdb.set_trace()
-                self._logger.info(
-                    f"Calculating just coherence {metric}.")
-                if metric in ["c_npmi", "u_mass", "c_v", "c_uci"]:
-                    print("Calculando coherencia..")
-                    num_cores = os.cpu_count()
-                    print(f"Usando {num_cores} núcleos para el cálculo de coherencia.")
-                    print("Los topics descriptions son", tpc_descriptions_)
-                    import pdb; pdb.set_trace()
-                    cm = CoherenceModel(topics=tpc_descriptions_,
-                                        texts=corpus,
-                                        dictionary=dictionary,
-                                        coherence=metric,
-                                        topn=n_words,
-                                        processes=num_cores)
-                    print("Se ha creado el objeto CoherenceModel.")
-                    print("Calculando coherencia por tópico..")
-                    self._topic_coherence = cm.get_coherence_per_topic()
-                else:
-                    self.logger.error(
-                        '-- -- -- Coherence metric provided is not available.')
-            else:
-                cohrs_aux = []
-                for metric in metrics:
-                    self._logger.info(
-                        f"Calculating coherence {metric}.")
-                    if metric in ["c_npmi", "u_mass", "c_v", "c_uci"]:
-                        cm = CoherenceModel(topics=tpc_descriptions_,
-                                            texts=corpus,
-                                            dictionary=dictionary,
-                                            coherence=metric,
-                                            topn=n_words)
-                        
-                        aux = cm.get_coherence_per_topic()
-                        cohrs_aux.extend(aux)
-                        self._logger.info(cohrs_aux)
-                    else:
-                        self.logger.error(
-                            '-- -- -- Coherence metric provided is not available.')
-                print("Coherence calculada:", cohrs_aux)
-                import pdb; pdb.set_trace()
-                self._topic_coherence = cohrs_aux
+        # Calcular la coherencia
+        try:
+            self._logger.info(f"Calculando coherencia usando la métrica {coherence_measure}...")
+            num_cores = os.cpu_count()
+            cm = CoherenceModel(
+                topics=topics,
+                texts=reference_text,
+                dictionary=dictionary,
+                coherence=coherence_measure,
+                topn=top_n,
+                processes=num_cores
+            )
+            confirmed_measures = cm.get_coherence_per_topic()
+            for i, coherence_value in enumerate(confirmed_measures):
+                self._logger.info(f"Coherencia para el tópico {i}: {coherence_value}")
+
+            mean = cm.get_coherence()
+            self._logger.info(f"Coherencia media: {mean}")
+            self._topic_coherence = confirmed_measures
+            self._save_cohr()
+            return confirmed_measures, mean
+        except ZeroDivisionError as e:
+            self._logger.error(f"ZeroDivisionError: {e}")
+            confirmed_measures = ['inf' if x == float('inf') else x for x in confirmed_measures]
+            mean = float('nan')
+            self._topic_coherence = confirmed_measures
+            self._save_cohr()
+            return confirmed_measures, mean
+    '''
 
     def _load_topic_coherence(self):
         if self._topic_coherence is None:
@@ -897,8 +979,24 @@ class TMmodel(object):
                 0][1]
             for tpc in tpcs[1:][::-1]:
                 del self._tpc_labels[tpc]
+            
+            # Parámetros para calcular coherencia
+            coherence_measure = 'c_npmi' # 'c_v' or 'c_npmi'
+            top_n = 15  
+            file_path = "/export/usuarios_ml4ds/cggamella/RAG_tool/data/dump/eswiki-latest-abstract.xml.gz"
+            
+            print("Calculando la coherencia...")
+            measure_name, mean_coherence, topic_coherences = self.calculate_topic_coherence(
+                coherence_measure=coherence_measure,
+                top_n=top_n,
+                file_path=file_path
+            )
 
-            self.calculate_topic_coherence()
+            # Loguear resultados de coherencia
+            self._logger.info(f"Coherencia calculada:")
+            print(f"Measure Name: {measure_name}")
+            print(f"Mean Coherence: {mean_coherence}")
+            print(f"Topic Coherences: {topic_coherences}")
             self._edits.append('f ' + ' '.join([str(el) for el in tpcs]))
             # We are ready to save all variables in the model
             self._calculate_sims()
@@ -969,15 +1067,14 @@ class TMmodel(object):
         except:
             return 0
 
+    # Not used... 
     def recalculate_cohrs(self):
 
         self.load_tpc_descriptions()
 
         try:
             self.calculate_topic_coherence()
-
             self._save_cohr()
-
             self._logger.info(
                 '-- -- Topics cohrence recalculation successful. All variables saved to file')
             return 1

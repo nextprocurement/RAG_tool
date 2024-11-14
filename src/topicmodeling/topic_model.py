@@ -772,11 +772,9 @@ class MalletLdaModel(TopicModel):
         betas = self.get_betas()
         topics = self.print_topics(verbose=False)
         topics_ = [topics[k] for k in topics.keys()]
-        metrics = {
-                'c_v': 0,
-                'c_uci': 0,
-                'c_npmi': 0
-        }
+        
+        metrics = {'c_v': 0, 'c_uci': 0, 'c_npmi': 0 }
+        
         #print("Las métricas de coherencia inicializadas son:", metrics)
         #import pdb; pdb.set_trace()
         #self._logger.info(f"-- -- Calculating coherence using get_coherence()...")
@@ -787,10 +785,6 @@ class MalletLdaModel(TopicModel):
         
         self._logger.info(f"-- -- Loading vocabulary...")
         vocab = self.vocab
-        
-        self._logger.info(
-            f"-- -- Coherence metrics: {metrics} for {self.num_topics} topics"
-        )
         
         # Calculate distributions
         self._logger.info(
@@ -817,10 +811,28 @@ class MalletLdaModel(TopicModel):
         tm = TMmodel(TMfolder=self.save_path / 'TMmodel')
         tm.create(betas=betas, thetas=thetas_sparse, alphas=alphas, vocab=vocab)
         
+        mean_coherence = tm.get_mean_coherence()
+        topic_coherences = tm.get_topic_coherences()
+        measure_name = tm.get_measure_name()
+        
+        metrics = {
+            measure_name: mean_coherence  
+        }
+        
+        import pdb; pdb.set_trace()
         self._logger.info(f"-- -- Saving model results...")
         # Save results
         self.save_results(
-            thetas = thetas_sparse, alphas=alphas, betas=betas, train_data=self.train_data, cohrs=coherence, topics=topics, bow_mat=bow_mat, vocab=self.vocab, save_model=False)
+            thetas=thetas_sparse,
+            alphas=alphas,
+            betas=betas,
+            train_data=self.train_data,
+            cohrs=metrics,
+            topics=topics,
+            bow_mat=bow_mat,
+            vocab=self.vocab,
+            save_model=False
+        )
         self._logger.info(f"-- -- Model results saved.")
         
         # Extract pipe for later inference
@@ -1857,3 +1869,4 @@ class TopicGPTModel(TopicModel):
             '-- -- TopicGPT does not calculate word-topic distributions. Exiting...')
 
         return None
+

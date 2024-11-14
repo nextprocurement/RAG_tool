@@ -1,7 +1,6 @@
 import argparse
 import os
 import pathlib
-
 from dotenv import load_dotenv
 
 def main():

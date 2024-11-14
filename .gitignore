@@ -161,6 +161,7 @@ cython_debug/
 
 # Folders to ignore
 RAG/
+data/
 local_cache/
 db_OBJETO_CONTRATO/
 db_POC_acronyms/
@@ -169,9 +170,12 @@ logs/
 example/
 blade.py
 
-
 #Files to ignore
 df_out_acronyms.parquet
+bin/
+lib64
+pyvenv.cfg
+dump_wikipedia_coherence.ipynb
 acronyms.parquet
 dataset_pruebas.xlsx
 cleaning_enrichment/config/config_carlos.yaml
@@ -190,7 +194,11 @@ prueba_NER.xlsx
 check.py
 src/acronyms/expander_pruebas.py
 src/acronyms/detector_pruebas.py
-
+hist_idf_scholar.png
+aux/scripts/txt2json.py
+aux/tests/RAG.ipynb
+aux/tests/convert_acr.ipynb
+aux/tests/mallet_problem.ipynb
 data/topic_labeller_tr_data.xlsx
 data/integracion_STOPS/
 src/topicmodeling/data/acronyms/in_text_score_mas_0_65_y_slash_remove_1000_equivalences.json
@@ -209,10 +217,17 @@ src/topicmodeling/data/acronyms/datos_modelo_es_Mallet_df_merged_14_topics_45_EN
 src/topicmodeling/data/acronyms/df_all_manual_both_equivalences.json
 src/topicmodeling/data/acronyms/synthetic_english_both_equivalences.json
 src/topicmodeling/data/acronyms/synthetic_spanish_both_equivalences.json
-
+src/topicmodeling/data/acronyms/datos_modelo_es_Mallet_df_merged_14_topics_45_ENTREGABLE_both_equivalences.json
+src/topicmodeling/data/acronyms/df_esp_100_200_equivalences.json
+src/topicmodeling/data/acronyms/in_text_score_mas_0_65_y_slash_remove_equivalences.json
+src/topicmodeling/data/equivalences_test/all_extracted_12aug_es_4_objectives_both_copy.json
+src/topicmodeling/data/equivalences_test/datos_modelo_es_Mallet_df_merged_14_topics_45_ENTREGABLE.json
+src/topicmodeling/data/stops/other_stops.json
 data/NextProcurement/
 data/objeto_contrato.xlsx
 get-pip.py
+hist_idf_scholar.png
+annotations_v2.png
 hist_idf_scholar.png
 
 

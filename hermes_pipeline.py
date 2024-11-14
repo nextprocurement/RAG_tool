@@ -110,7 +110,7 @@ def main():
     parser.add_argument(
         "--num_topics",
         help="Number of topics",
-        type=str, default="12,14,20,25", required=False)
+        type=str, default="12,14", required=False)
     parser.add_argument(
         "--num_iters",
         help="Number of iterations",
@@ -631,3 +631,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
+    
