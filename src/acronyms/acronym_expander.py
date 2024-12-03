@@ -221,21 +221,34 @@ class HermesAcronymExpander(object):
         
         # Dspy settings
         if model_type == "llama":
-            self.lm = dspy.HFClientTGI(model="meta-llama/Meta-Llama-3-8B ",
-                                       port=8090, url="http://127.0.0.1")
+            #self.lm = dspy.HFClientTGI(model="meta-llama/Meta-Llama-3-8B ",port=8090, url="http://127.0.0.1")
+            self.lm = dspy.LM(
+                "ollama_chat/llama3.1:8b-instruct-q8_0",# también puede ser llama3.2
+                api_base="http://kumo01:11434"  # Dirección base de tu API
+            )
         elif model_type == "openai":
             load_dotenv(path_open_api_key)
             api_key = os.getenv("OPENAI_API_KEY")
             os.environ["OPENAI_API_KEY"] = api_key
             self.lm = dspy.OpenAI(model=open_ai_model)
-        dspy.settings.configure(lm=self.lm, temperature=0)
+    
+        # TODOAdd mistral model
+        elif model_type == "mistral":
+            self.lm = dspy.LM(
+                "mistral/mistral_to_do", # Nombre del modelo
+                api_base="http://kumo01:11434"
+            )
+        else:
+            raise ValueError(f"Modelo no soportado: {model_type}")
+            
+        dspy.configure(lm=self.lm, temperature=0)
         
         if not do_train:
             if not pathlib.Path(trained_promt).exists():
                 self._logger.error("Trained prompt not found. Exiting.")
                 return
             self.module = AcronymExpanderModule()
-            self.module.load(trained_promt)
+            self.module.load(trained_promt, use_legacy_loading=True)
             self._logger.info(f"AcronymExpanderModule loaded from {trained_promt}") 
         else:
             if not data_path:

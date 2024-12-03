@@ -13,7 +13,7 @@ llm:
 
 # ACRONYM Configuration
 acr:
-  data_column_name: "objective"  # Define the column name to read, can be 'objective','text', 'title', 'texto_sin_preprocesar', etc...
+  data_column_name: "objective"  # Column name to read, can be 'objective','text', 'title', 'texto_sin_preprocesar', etc...
   train_all_modules: false  # If is true, all modules will be trained, if is false, only the modules in the list modules_to_train will be trained
   modules_to_train:  # List of modules to train
     #- HermesAcronymExpander
@@ -25,10 +25,11 @@ preproc:
   source_type : "parquet"
   spacy_model : "es_core_news_lg" #en_core_web_lg
   lang : "es"
+  do_lemmatization: true
 
 equiv:
-  num_topics : 10 # before set to 100
+  num_topics : 5 # before set to 100
   further_proc: True
   model_type: "MalletLda"
   language : "spanish"
-  top_k : 50 # before set to 100
+  top_k : 10 # before set to 100

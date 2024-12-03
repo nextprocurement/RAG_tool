@@ -55,6 +55,8 @@ def main():
                         required=False, help="Number of workers to use with Dask")
     parser.add_argument("--path_add_acr", type=str, default=None,
                         required=False, help="Path to addidional acronyms file")
+    parser.add_argument('--no_lemmatization', default=False, required=False,
+                        action='store_true', help="Flag to disable lemmatization")
 
     args = parser.parse_args()
 
@@ -237,6 +239,7 @@ def main():
                            max_length=max_len,
                            raw_text_cols=raw_txt_flds,
                            path_add_acr=args.path_add_acr,
+                           do_lemmatization=not args.no_lemmatization,
                            logger=logger)
 
         logger.info(f'-- -- NLP preprocessing starts...')

@@ -483,14 +483,25 @@ class HermesEquivalencesGenerator(object):
         
         # Dspy settings
         if model_type == "llama":
-            self.lm = dspy.HFClientTGI(model="meta-llama/Meta-Llama-3-8B ",
-                                       port=8090, url="http://127.0.0.1")
+            #self.lm = dspy.HFClientTGI(model="meta-llama/Meta-Llama-3-8B ",port=8090, url="http://127.0.0.1")
+            self.lm = dspy.LM(
+                "ollama_chat/llama3.1:8b-instruct-q8_0",# también puede ser llama3.2
+                api_base="http://kumo01:11434"  # Dirección base de tu API
+            )
         elif model_type == "openai":
             load_dotenv(path_open_api_key)
             api_key = os.getenv("OPENAI_API_KEY")
             os.environ["OPENAI_API_KEY"] = api_key
             self.lm = dspy.OpenAI(model=open_ai_model)
-        dspy.settings.configure(lm=self.lm)
+    
+        # TODOAdd mistral model
+        elif model_type == "mistral":
+            self.lm = dspy.LM(
+                "mistral/mistral_to_do", # Nombre del modelo
+                api_base="http://kumo01:11434"
+            )
+        else:
+            raise ValueError(f"Modelo no soportado: {model_type}")
         
         if not use_optimized:
             self.module = TransformModule(optim=False, lang=lang)

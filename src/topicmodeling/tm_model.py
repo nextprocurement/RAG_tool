@@ -21,7 +21,6 @@ from gensim.models import CoherenceModel
 from gensim.corpora import Dictionary
 import scipy.sparse as sparse
 from sparse_dot_topn import awesome_cossim_topn
-#from gensim.models.coherencemodel import CoherenceModel
 #from src.Embeddings.embedder import Embedder
 #from topic_labeller import TopicLabeller
 

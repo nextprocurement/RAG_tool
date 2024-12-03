@@ -29,6 +29,7 @@ class Pipe():
                  max_length: int,
                  raw_text_cols: List[str],
                  path_add_acr: str = None,
+                 do_lemmatization: bool = True, # Add new parameter to control whether do lemmatization or not
                  logger=None):
         """
         Initilization Method
@@ -48,17 +49,21 @@ class Pipe():
             List of columns containing the raw text to be preprocessed
         path_add_acr: str
             Path to acronyms JSON file
+        do_lemmatization: bool
+            If True, lemmatization will be carried out
         logger: Logger object
             To log object activity
         """
-
+        
         # Create logger object
         if logger:
             self._logger = logger
         else:
             logging.basicConfig(level='INFO')
             self._logger = logging.getLogger('nlpPipeline')
-
+        
+        self._do_lemmatization = do_lemmatization
+        
         # Load stopwords and acronyms
         self._loadSTW(stw_files)
         self._loadACR(language, path_add_acr)
@@ -187,14 +192,29 @@ class Pipe():
         # first filter of raw words (before lemmatization)
         text = ' '.join([word for word in text.split() if word not in self._stw_list and word != 'él'])
         doc = self._nlp(text)
-        lemmatized = [token.lemma_ for token in doc
-                      if token.is_alpha
-                      and token.pos_ in valid_POS
-                      and not token.is_stop
-                      and token.lemma_ not in self._stw_list]
+        
+        if self._do_lemmatization:
+            tokens = [token.lemma_ for token in doc
+                    if token.is_alpha
+                    and token.pos_ in valid_POS
+                    and not token.is_stop
+                    and token.lemma_ not in self._stw_list]
+        else:
+            tokens = [token.text for token in doc
+                    if token.is_alpha
+                    and token.pos_ in valid_POS
+                    and not token.is_stop
+                    and token.text.lower() not in self._stw_list]
+            
+        #lemmatized = [token.lemma_ for token in doc
+        #              if token.is_alpha
+        #              and token.pos_ in valid_POS
+        #              and not token.is_stop
+        #               and token.lemma_ not in self._stw_list]
 
         # Convert to lowercase
-        final_tokenized = [token.lower() for token in lemmatized]
+        #final_tokenized = [token.lower() for token in lemmatized]
+        final_tokenized = [token.lower() for token in tokens]
 
         return final_tokenized
 
@@ -227,13 +247,16 @@ class Pipe():
         """
         
         if len(self._raw_text_cols) > 1:
-            new_raw_text_cols = [col.split("_")[0] + "_lemmas" for col in self._raw_text_cols]
+            if self._do_lemmatization:
+                new_raw_text_cols = [col.split("_")[0] + "_lemmas" for col in self._raw_text_cols]
+            else:
+                new_raw_text_cols = [col.split("_")[0] + "_tokens" for col in self._raw_text_cols]
         else:
-            new_raw_text_cols = ["lemmas"]
+            new_raw_text_cols = ["lemmas"] if self._do_lemmatization else ["tokens"]
                         
         for col, new_col in zip(self._raw_text_cols, new_raw_text_cols):
-            # Lemmatize text
-            self._logger.info(f"-- Lemmatizing text of {col}")
+            action = "Lemmatizing" if self._do_lemmatization else "Tokenizing"
+            self._logger.info(f"-- {action} text of {col}")
             if use_dask:
                 corpus_df[new_col] = corpus_df[col].apply(
                     self.do_pipeline,
@@ -251,21 +274,22 @@ class Pipe():
                 # Create corpus from tokenized lemmas
                 self._logger.info(
                     "-- Creating corpus from lemmas for n-grams detection")
+                source_text = "lemmas" if self._do_lemmatization else "tokens"
                 if use_dask:
                     with ProgressBar():
                         if nw > 0:
-                            lemmas = corpus_df[new_col].compute(
+                            tokens = corpus_df[new_col].compute(
                                 scheduler='processes', num_workers=nw)
                         else:
                             # Use Dask default number of workers (i.e., number of cores)
-                            lemmas = corpus_df[new_col].compute(
+                            tokens = corpus_df[new_col].compute(
                                 scheduler='processes')
                 else:
-                    lemmas = corpus_df[new_col]
+                    tokens = corpus_df[new_col]
 
                 # Create Phrase model for n-grams detection
                 self._logger.info("-- Creating Phrase model")
-                phrase_model = Phrases(lemmas, min_count=2, threshold=20)
+                phrase_model = Phrases(tokens, min_count=2, threshold=20)
 
                 # Carry out n-grams substitution
                 self._logger.info("-- Carrying out n-grams substitution")
