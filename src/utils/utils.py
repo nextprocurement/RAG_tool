@@ -172,7 +172,9 @@ def process_dataframe(
 
     if chunker is None:
         chunker = Chunker(context_window=context_window, max_windows=max_windows, window_overlap=window_overlap)
-        
+    print("El archivo para procesar y detectar/expandir acr es", df)
+    # Sus cols son 'objective', 'Acronyms Detected(LLM)', 'Expansions', 'text_substituted', 'id_tm'
+    import pdb; pdb.set_trace()
     # Add columns to store the detected acronyms and their expansions
     if action in ["detect", "both"]:
         df['Acronyms Detected(LLM)'] = ''

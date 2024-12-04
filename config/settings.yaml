@@ -28,8 +28,8 @@ preproc:
   do_lemmatization: true
 
 equiv:
-  num_topics : 5 # before set to 100
+  num_topics : 100 # It's recommended to use 100 or any big number to find more equivalences
   further_proc: True
   model_type: "MalletLda"
   language : "spanish"
-  top_k : 10 # before set to 100
+  top_k : 100 # before set to 100

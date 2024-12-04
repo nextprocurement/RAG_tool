@@ -37,7 +37,7 @@ def main():
         "--save_path",
         type=str,
         help="Path to save the output files",
-        default="/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/data/out")
+        default="/export/usuarios_ml4ds/cggamella/RAG_tool/data/integracion_STOPS/out")
     parser.add_argument(
         "--mode",
         type=str,
@@ -51,6 +51,12 @@ def main():
         "--do_train",
         action='store_true',
         help="Indicate if the models should be trained.")
+    parser.add_argument(
+        "--train_data_path",
+        type=str,
+        default=None,
+        help="Path to training DSPy modules for the acronym detector and expander"
+    )
     parser.add_argument(
         "--context_window",
         type=int,
@@ -151,7 +157,7 @@ def main():
         if not path_root_save.exists():
             path_root_save.mkdir(parents=True)
             
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
 
         #**********************************************************************
         # 1. Acronym Detection and Expansion
@@ -182,28 +188,49 @@ def main():
             #############
             # Decide whether to train based on configuration file and arguments
             do_train = getattr(args, 'do_train', False) or config['acr'].get('train_all_modules', False)
-
-            # Verify if the model should be trained
-            should_train = do_train or "HermesAcronymDetector" in (config['acr'].get('modules_to_train') or [])
             
-            detector = HermesAcronymDetector(
-                model_type=args.llm_type,
-                do_train=should_train,
-                data_path=args.data_path,
-                logger=logger
-            )
+            train_data_path = args.train_data_path or config['acr'].get('train_data_path')
+
+            if do_train and not train_data_path:
+                logger.error("Training data path is required for training but not provided.")
+                return
+            
+            # Verify if the model should be trained
+            should_train_detector = do_train or "HermesAcronymDetector" in (config['acr'].get('modules_to_train') or [])
+            
+            if should_train_detector:
+                detector = HermesAcronymDetector(
+                    model_type=args.llm_type,
+                    do_train=should_train_detector,
+                    data_path=train_data_path,  # Usar train_data_path para entrenamiento
+                    logger=logger
+                )
+            else:
+                detector = HermesAcronymDetector(
+                    model_type=args.llm_type,
+                    do_train=should_train_detector,
+                    logger=logger
+                )
             
             #############
             # EXPANSION #
             #############
-            # Verify if the model should be trained
-            should_train = do_train or "HermesAcronymExpander" in (config['acr'].get('modules_to_train') or [])
-            expander = HermesAcronymExpander(
-                model_type=args.llm_type,
-                do_train=should_train,
-                data_path=args.data_path,
-                logger=logger
-            )
+            # Verify if the Expander should be trained or not
+            should_train_expander = do_train or "HermesAcronymExpander" in (config['acr'].get('modules_to_train') or [])
+            
+            if should_train_expander:
+                expander = HermesAcronymExpander(
+                    model_type=args.llm_type,
+                    do_train=should_train_expander,
+                    data_path=train_data_path,  # Usar train_data_path para entrenamiento
+                    logger=logger
+                )
+            else:
+                expander = HermesAcronymExpander(
+                    model_type=args.llm_type,
+                    do_train=should_train_expander,
+                    logger=logger
+                )
             
             # Process the DataFrame for detection and expansion
             try:
@@ -229,6 +256,8 @@ def main():
             path_sal = '/export/usuarios_ml4ds/cggamella/RAG_tool/src/topicmodeling/data/acronyms/'
             generate_acronym_expansion_json(path_save, path_sal)
             logger.info(f"JSON with detected and expanded acronyms saved on {path_sal}")
+            
+            import pdb; pdb.set_trace()
             
         #***********************************************************************
         # 2. Preprocessing
@@ -270,7 +299,7 @@ def main():
             
             if not do_lemmatization:
                 cmd.append('--no_lemmatization')
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
             try:
                 logger.info(f'-- -- Running preprocessing command {" ".join(cmd)}')
                 subprocess.check_output(cmd)
@@ -420,7 +449,6 @@ def main():
                     
                     path_to_source = model_path / f"{config['equiv']['model_type']}_{config['equiv']['num_topics']}" / "vocabulary.txt" if args.source_eq == "vocabulary" else model_path / f"{config['equiv']['model_type']}_{config['equiv']['num_topics']}"
 
-
                     logger.info(f"-- -- Generating equivalences from {args.source_eq}...")
                     eq_generator.generate_equivalences(
                         source = args.source_eq,
@@ -557,7 +585,7 @@ def main():
             ]
             if not do_lemmatization:
                 cmd.append('--no_lemmatization')
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
             try:
                 logger.info(f'-- -- Running preprocessing command {" ".join(cmd)}')
                 subprocess.check_output(cmd)

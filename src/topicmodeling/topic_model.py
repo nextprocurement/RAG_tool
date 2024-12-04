@@ -170,8 +170,8 @@ class TopicModel(ABC):
         get_preprocessed: bool = True,
         further_proc: bool = True,
         min_lemas: int = 3,
-        no_below: int = 10,
-        no_above: float = 0.6, 
+        no_below: int = 1, #before set to 10
+        no_above: float = 0.95, #before set to 0.6
         keep_n: int = 100000,
         stops_path: str = "src/topicmodeling/data/stops",
         eqs_path: str = "src/topicmodeling/data/equivalences"
@@ -201,6 +201,7 @@ class TopicModel(ABC):
         if further_proc: # remove add stops and equivs
             self._logger.info(f"-- -- Generating stopwords based on TF-IDF with dynamic threshold")
             texts = df['lemmas'].tolist()
+            import pdb; pdb.set_trace()
             stopwords_tfidf = generate_dynamic_stopwords(texts, percentage_below_mean=0.2)
             self._logger.info(f"-- -- The number of stopwords is {len(stopwords_tfidf)} based on TF-IDF")
             # Save stopwords 

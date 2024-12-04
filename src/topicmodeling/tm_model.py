@@ -3,13 +3,16 @@
 Authors: Jerónimo Arenas-García, J.A. Espinosa-Melchor, Lorena Calvo-Bartolomé, Carlos González Gamella
 Modifed: 24/01/2024 (Updated for NP-Solr-Service (NextProcurement Proyect))
 Modified: 11/02/2024 (Updated for NP-Search-Tool (NextProcurement Proyect) to include topic labelling method based on OpenAI's GPT-X models)
-Modified: 12/11/2024 (Updated coherence calculation with refence text dumped from the wikipedia for spanish text coherence calculation)
+Modified: 04/12/2024 (Updated coherence calculation with refence text dumped from the wikipedia for
+spanish and english text coherence calculation automated with language detection)
 """
 
 import shutil
 import warnings
 from pathlib import Path
 import os
+import random
+from collections import Counter
 from tqdm import tqdm
 import pandas as pd
 import numpy as np
@@ -21,6 +24,7 @@ from gensim.models import CoherenceModel
 from gensim.corpora import Dictionary
 import scipy.sparse as sparse
 from sparse_dot_topn import awesome_cossim_topn
+from lingua import Language, LanguageDetectorBuilder
 #from src.Embeddings.embedder import Embedder
 #from topic_labeller import TopicLabeller
 
@@ -128,6 +132,8 @@ class TMmodel(object):
             Vector of length n_topics containing the importance of each topic
         vocab: list
             List of words sorted according to betas matrix
+        lang: str
+            Language to use for the model ('es' for Spanish, 'en' for English)
         """
 
         # If folder already exists no further action is needed
@@ -171,10 +177,44 @@ class TMmodel(object):
         print("Coherence al crear el TMmodel:")
         # Parámetros para calcular coherencia
         coherence_measure = 'c_v'  
-        top_n = 15  
-        file_path = "/export/usuarios_ml4ds/cggamella/RAG_tool/data/dump/eswiki-latest-abstract.xml.gz"
+        top_n = 15
+        
+        # Detectar el idioma del modelo con langdetect 
+        languages = [Language.ENGLISH, Language.SPANISH] #Language.BASQUE, Language.CATALAN
+        detector = LanguageDetectorBuilder.from_languages(*languages).build()
+        #idiomas_detectados = detector.detect_languages_in_parallel_of(df['text'].tolist())
+        
+        # Seleccionar 50 palabras aleatorias del vocabulario
+        sample_size = min(50, len(vocab))  
+        random_words = random.sample(vocab, sample_size)
 
-        self._logger.info("Calculando la coherencia...")
+        # Detectar idioma para cada palabra
+        detected_languages = [detector.detect_language_of(word) for word in random_words]
+        import pdb; pdb.set_trace()
+        # Contar las ocurrencias de cada idioma
+        language_counts = Counter(detected_languages)
+        total_detected = sum(language_counts.values())
+
+        # Determinar el idioma predominante (más del 85%)
+        predominant_language, predominant_count = language_counts.most_common(1)[0]
+        if predominant_count / total_detected >= 0.85:
+            if predominant_language == Language.SPANISH:
+                lang = "es"
+                file_path = "/export/usuarios_ml4ds/cggamella/RAG_tool/data/dump/eswiki-latest-abstract.xml.gz"
+            elif predominant_language == Language.ENGLISH:
+                lang = "en"
+                file_path = "/export/usuarios_ml4ds/cggamella/RAG_tool/data/dump/enwiki-latest-abstract.xml.gz"
+            else:
+                self._logger.error(f"Unsupported predominant language detected: {predominant_language}")
+                return
+        else:
+            self._logger.error("No predominant language detected with >90% confidence.")
+            return
+
+        self._logger.info(f"Idioma predominante detectado: {lang} ({predominant_language}).")
+        self._logger.info(f"Calculando la coherencia en {lang}...")
+  
+        self._logger.info(f"Calculando la coherencia en {lang}...")
         measure_name, mean_coherence, topic_coherences = self.calculate_topic_coherence(
             coherence_measure=coherence_measure,
             top_n=top_n,

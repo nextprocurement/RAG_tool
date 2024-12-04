@@ -43,6 +43,7 @@ def file_lines(fname):
     -------
     number of lines
     """
+    i = -1  
     with fname.open('r', encoding='utf8') as f:
         for i, l in enumerate(f):
             pass

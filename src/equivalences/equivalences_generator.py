@@ -503,6 +503,8 @@ class HermesEquivalencesGenerator(object):
         else:
             raise ValueError(f"Modelo no soportado: {model_type}")
         
+        dspy.configure(lm=self.lm, temperature=0)
+        
         if not use_optimized:
             self.module = TransformModule(optim=False, lang=lang)
         elif use_optimized and not do_train:

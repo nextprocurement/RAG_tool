@@ -186,7 +186,7 @@ class HermesAcronymExpander(object):
         do_train: bool = False,
         data_path: str = None,
         trained_promt: str = pathlib.Path(
-            __file__).parent.parent.parent / "data/optimized/HermesAcronymExpander-saved.json",
+            __file__).parent.parent.parent / "data/optimized_new_DSPy/HermesAcronymExpander-saved.json",
         trf_model: str = 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2',
         logger: logging.Logger = None,
         path_logs: pathlib.Path = pathlib.Path(

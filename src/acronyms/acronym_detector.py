@@ -48,7 +48,6 @@ class AcronymDetectorModule(dspy.Module):
     
     def save(self, path, save_field_meta=False):
         print("*"*50)
-        sleep(5)
         with open(path, "w") as f:
             f.write(ujson.dumps(self.dump_state(save_field_meta), indent=2, ensure_ascii=False, escape_forward_slashes=False))
             
@@ -105,7 +104,7 @@ class HermesAcronymDetector:
         do_train: bool = False,
         data_path: str = None,
         trained_promt: str = pathlib.Path(
-            __file__).parent.parent.parent / "data/optimized/HermesAcronymDetector-saved.json",
+            __file__).parent.parent.parent / "data/optimized_new_DSPy/HermesAcronymDetector-saved.json",
         trf_model: str = 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2',
         logger: logging.Logger = None,
         path_logs: pathlib.Path = pathlib.Path(
@@ -153,7 +152,7 @@ class HermesAcronymDetector:
         # TODOAdd mistral model
         elif model_type == "mistral":
             self.lm = dspy.LM(
-                "mistral/mistral_to_do", # Nombre del modelo
+                "mistral/mistral_to_do", # Nombre del modelo a desplegar en container ollama
                 api_base="http://kumo01:11434"
             )
         else:
