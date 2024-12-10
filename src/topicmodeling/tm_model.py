@@ -190,7 +190,7 @@ class TMmodel(object):
 
         # Detectar idioma para cada palabra
         detected_languages = [detector.detect_language_of(word) for word in random_words]
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         # Contar las ocurrencias de cada idioma
         language_counts = Counter(detected_languages)
         total_detected = sum(language_counts.values())
@@ -211,10 +211,8 @@ class TMmodel(object):
             self._logger.error("No predominant language detected with >90% confidence.")
             return
 
-        self._logger.info(f"Idioma predominante detectado: {lang} ({predominant_language}).")
-        self._logger.info(f"Calculando la coherencia en {lang}...")
-  
-        self._logger.info(f"Calculando la coherencia en {lang}...")
+        self._logger.info(f"Idioma predominante detectado:{predominant_language}.")  
+        self._logger.info(f"Calculando la coherencia en {predominant_language}...")
         measure_name, mean_coherence, topic_coherences = self.calculate_topic_coherence(
             coherence_measure=coherence_measure,
             top_n=top_n,
@@ -291,6 +289,11 @@ class TMmodel(object):
         # We consider all documents are equally important
         doc_len = ndocs * [1]
         vocabfreq = np.round(ndocs*(self._alphas.dot(self._betas))).astype(int)
+        
+        vis_data = None
+        if self._TMfolder.name == '3.equivalence_detection':
+            self._logger.info("Saltando cálculo pyLDAvis porque estamos dentro de la carpeta '3'.")
+            return
         try:
             vis_data = pyLDAvis.prepare(
                 self._betas,
@@ -312,13 +315,18 @@ class TMmodel(object):
         # self._modify_pyldavis_html(self._TMfolder.as_posix())
 
         # Get coordinates of topics in the pyLDAvis visualization
-        vis_data_dict = vis_data.to_dict()
-        self._coords = list(
-            zip(*[vis_data_dict['mdsDat']['x'], vis_data_dict['mdsDat']['y']]))
-
-        with self._TMfolder.joinpath('tpc_coords.txt').open('w', encoding='utf8') as fout:
-            for item in self._coords:
-                fout.write(str(item) + "\n")
+        # Verificar si vis_data se generó correctamente
+        if vis_data is not None:
+            # Obtener coordenadas de los temas
+            vis_data_dict = vis_data.to_dict()
+            self._coords = list(
+                zip(*[vis_data_dict['mdsDat']['x'], vis_data_dict['mdsDat']['y']])
+            )
+            with self._TMfolder.joinpath('tpc_coords.txt').open("w", encoding="utf8") as fout:
+                for item in self._coords:
+                    fout.write(str(item) + "\n")
+        else:
+            self._logger.warning("No se pudieron generar las coordenadas de pyLDAvis debido a un error previo.")
 
         return
 
@@ -499,7 +507,7 @@ class TMmodel(object):
 
         return
     
-    def _load_reference_text(self, file_path, limit=1500000):
+    def _load_reference_text(self, file_path, limit=500000):
         """
         Load reference text dump from wikipedia for coherence calculation.
         Abstract <tag> text from the wikipedia dump is used for coherence calculation.
@@ -552,6 +560,7 @@ class TMmodel(object):
         reference_text = self._load_reference_text(file_path)
         vocab = Dictionary(reference_text)
         self._logger.info("Dictionary created from reference text.")
+        #import pdb; pdb.set_trace()
         
         try:
             cm = CoherenceModel(
@@ -572,7 +581,6 @@ class TMmodel(object):
             confirmed_measures = [float('inf') if x == float('inf') else x for x in confirmed_measures]
             mean = float('nan')
             self._topic_coherence = confirmed_measures
-            #self._save_cohr() # Ya se guarda en el método _save_all()
 
         measure_name = self._gen_measure_name(coherence_measure, cm.window_size, top_n)
         return measure_name, float(mean), [float(i) for i in confirmed_measures]

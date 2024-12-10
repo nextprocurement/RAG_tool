@@ -201,7 +201,7 @@ class TopicModel(ABC):
         if further_proc: # remove add stops and equivs
             self._logger.info(f"-- -- Generating stopwords based on TF-IDF with dynamic threshold")
             texts = df['lemmas'].tolist()
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
             stopwords_tfidf = generate_dynamic_stopwords(texts, percentage_below_mean=0.2)
             self._logger.info(f"-- -- The number of stopwords is {len(stopwords_tfidf)} based on TF-IDF")
             # Save stopwords 
@@ -820,7 +820,7 @@ class MalletLdaModel(TopicModel):
             measure_name: mean_coherence  
         }
         
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         self._logger.info(f"-- -- Saving model results...")
         # Save results
         self.save_results(

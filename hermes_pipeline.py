@@ -103,7 +103,7 @@ def main():
     parser.add_argument(
         "--times_equiv",
         action='store_true',
-        default=3, # For final models fix to 3
+        default=1, # For final models fix to 3
         help="Number of times to run the equivalence detection"
     )
         
@@ -257,7 +257,7 @@ def main():
             generate_acronym_expansion_json(path_save, path_sal)
             logger.info(f"JSON with detected and expanded acronyms saved on {path_sal}")
             
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
             
         #***********************************************************************
         # 2. Preprocessing

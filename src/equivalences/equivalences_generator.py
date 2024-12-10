@@ -8,6 +8,7 @@ import json
 import numpy as np
 import pandas as pd
 import pathlib
+import ast
 from sklearn.cluster import DBSCAN
 from sklearn.model_selection import train_test_split
 from sentence_transformers import SentenceTransformer
@@ -91,9 +92,41 @@ class EquivalencesDataset(Dataset):
     def _convert_to_json(self, data: pd.DataFrame):
         if data is not None:
             return data.to_dict(orient='records')
+
+class Equivalent(dspy.Signature):
+    """
+    Unify a list of words in a single word in singular form.
+    
+    ----------------------------------------------------------------------------
+    Examples
+    --------
+    WORDS: "deportes", "deportivo", "deporte", "deportista", "deportivista"
+    EQ_WORD: "deporte"
+    """
+    
+    WORDS = dspy.InputField()
+    EQ_WORD = dspy.OutputField()
+    
+class EquivalentModule(dspy.Module):
+    def __init__(
+        self,
+    ):
+        """
+        Initialize the EquivalentModule, which agrupate list of words in a single word.
+        """
+        super().__init__()
+        self.eq = dspy.Predict(Equivalent)
         
+    def forward(self, words: str):
+        """
+        Forward pass of the module.
+        """
+        return self.eq(WORDS=words).EQ_WORD
+
+# Note: The following class is not used in the final implementation-> EquivalentModule is used instead   
 class Corrector(dspy.Signature):
-    """Corrects spelling mistakes in the given word.
+    """
+    Corrects spelling mistakes in the given word.
     
     ----------------------------------------------------------------------------
     Examples
@@ -480,6 +513,7 @@ class HermesEquivalencesGenerator(object):
         else:
             self._nlp_model = load_spacy("en_core_web_md")
         self._corrector = CorrectorModule()
+        self.eq_module = EquivalentModule()
         
         # Dspy settings
         if model_type == "llama":
@@ -493,15 +527,14 @@ class HermesEquivalencesGenerator(object):
             api_key = os.getenv("OPENAI_API_KEY")
             os.environ["OPENAI_API_KEY"] = api_key
             self.lm = dspy.OpenAI(model=open_ai_model)
-    
-        # TODOAdd mistral model
+        # TODO Add mistral model
         elif model_type == "mistral":
             self.lm = dspy.LM(
-                "mistral/mistral_to_do", # Nombre del modelo
+                "mistral/mistral_to_do", # Model name
                 api_base="http://kumo01:11434"
             )
         else:
-            raise ValueError(f"Modelo no soportado: {model_type}")
+            raise ValueError(f"Model it is not supported: {model_type}")
         
         dspy.configure(lm=self.lm, temperature=0)
         
@@ -750,7 +783,8 @@ class HermesEquivalencesGenerator(object):
         self.module.save(trained_promt)
 
     def validate_equivalences(self, example, pred, trace=None):
-        """Function to validate the equivalences predicted by the module during optimization.
+        """
+        Function to validate the equivalences predicted by the module during optimization.
         
         Parameters
         ----------
@@ -888,7 +922,8 @@ class HermesEquivalencesGenerator(object):
         """
         Generate equivalences for the given words and language.
         """
-        ######################################################################### Get words that will be used to detect equivalences
+        ######################################################################### 
+        # Get words that will be used to detect equivalences
         ########################################################################
         if source not in ["vocabulary", "tm"]:
             raise ValueError("source must be either 'vocabulary' or 'tm'")
@@ -928,7 +963,8 @@ class HermesEquivalencesGenerator(object):
         
         self._logger.info(f"-- -- Clusters will be created on {len(all_words)} words")
         
-        ######################################################################### Generate clusters
+        ######################################################################### 
+        # Generate clusters
         ########################################################################
         word_embeddings = self._get_embeddings(all_words)
         words = list(word_embeddings.keys())
@@ -938,7 +974,8 @@ class HermesEquivalencesGenerator(object):
         # word_groups = [cluster_to_words[el] for el in cluster_to_words ]
         word_groups = self._get_words_by_cluster_sim(embeddings, words)
         
-        ######################################################################### Generate equivalences
+        ######################################################################### 
+        # Generate equivalences
         ########################################################################
         if language == "es":
             language = "spanish"
@@ -958,11 +995,11 @@ class HermesEquivalencesGenerator(object):
         df.to_excel("/export/usuarios_ml4ds/cggamella/RAG_tool/data/objeto_contrato.xlsx")
 
         # filter empty equivalences
-        df = df[df['equivalence'].str.len() > 0]
+        df_old = df[df['equivalence'].str.len() > 0]
         print(df.head())
         # Loop through the dataframe to create the wordlist
         word_list = []
-        for _, row in df.iterrows():
+        for _, row in df_old.iterrows():
             for equivalence in row['equivalence']:
                 for key, values in equivalence.items():
                     for value in values:
@@ -973,18 +1010,52 @@ class HermesEquivalencesGenerator(object):
                         key = key.replace(" ", "_")
                         if key != value:
                             word_list.append(f"{value}:{key}")
+        
+        import pdb; pdb.set_trace()
 
+        result = []
+        for _, row in df.iterrows():
+            origin_words = row['origin']
+            if not isinstance(origin_words, list):
+                origin_words = ast.literal_eval(origin_words)
+            print(f"Las listas de palabras son {origin_words}")
+            eq_word = self.eq_module(origin_words) 
+            eq_word = eq_word.replace("«", "").replace("»", "")
+            eq_word = eq_word.strip('"').strip("'")
+            eq_word = eq_word.replace(" ", "_")
+            print(f"La equivalencia es {eq_word}")
+            for w in origin_words:
+                result.append({w: eq_word})
+        
+        word_list_new = [f"{list(d.keys())[0]}:{list(d.values())[0]}" for d in result]
         # Create the JSON structure
-        json_data = {
-            "name": "cpv45_equivalences",
+        json_data_old = {
+            "name": "OLD_equivalences",
             "description": "",
             "valid_for": "equivalences",
             "visibility": "Public",
             "wordlist": word_list
         }
+        
+        # Create the JSON structure
+        json_data_new = {
+            "name": "NEW_equivalences",
+            "description": "",
+            "valid_for": "equivalences",
+            "visibility": "Public",
+            "wordlist": word_list_new
+        }
+        
+        
+        path_save_old = path_save.parent / f"{path_save.stem}_old{path_save.suffix}"
+        path_save_new = path_save.parent / f"{path_save.stem}_new{path_save.suffix}"
 
-        # Write the JSON data to a file
-        with open(path_save, 'w') as json_file:
-            json.dump(json_data, json_file, indent=4, ensure_ascii=False)
+        # Escribir el primer JSON en path_save_old
+        with open(path_save_old, 'w', encoding='utf-8') as json_file:
+            json.dump(json_data_old, json_file, indent=4, ensure_ascii=False)
+
+        # Escribir el segundo JSON en path_save_new
+        with open(path_save_new, 'w', encoding='utf-8') as json_file:
+            json.dump(json_data_new, json_file, indent=4, ensure_ascii=False)
         
         print(f"Time elapsed in generation: {time.time() - time_start}")

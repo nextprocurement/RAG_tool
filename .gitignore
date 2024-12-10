@@ -134,6 +134,7 @@ venv
 .venv_preproc 
 venv_hermes
 venv_nuevo
+v_env
 
 # Spyder project settings
 .spyderproject

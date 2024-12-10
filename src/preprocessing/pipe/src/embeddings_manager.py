@@ -265,7 +265,7 @@ class EmbeddingsManager(object):
         #emdarray = da.from_array(embeddings) #, chunks=tuple(chunks)
         index_col = corpus_df['id'].compute().to_frame()
         index_col['embeddings'] = pd.Series(embeddings, index = index_col.index[:len(embeddings)]) 
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         joined = dd.merge(corpus_df, index_col)
 
         # Assign the list of embeddings to the dataframe
