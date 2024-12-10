@@ -169,6 +169,7 @@ db_POC_acronyms/
 files/
 logs/
 example/
+aux_files
 blade.py
 
 #Files to ignore
