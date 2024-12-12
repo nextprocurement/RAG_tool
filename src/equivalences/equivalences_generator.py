@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import pathlib
 import ast
+import yaml
 from sklearn.cluster import DBSCAN
 from sklearn.model_selection import train_test_split
 from sentence_transformers import SentenceTransformer
@@ -102,6 +103,9 @@ class Equivalent(dspy.Signature):
     --------
     WORDS: "deportes", "deportivo", "deporte", "deportista", "deportivista"
     EQ_WORD: "deporte"
+    
+    WORDS: "ministro", "ministerio", "ministra", "ministerios", "ministros", "ministras", "ministerial"
+    EQ_WORD: "ministerio"
     """
     
     WORDS = dspy.InputField()
@@ -505,8 +509,7 @@ class HermesEquivalencesGenerator(object):
         path_logs : pathlib.Path, optional
             Path to logs directory, by default pathlib.Path(__file__).parent.parent / "data/logs"
         """
-        
-        self._logger = logging.getLogger(__name__)
+        self._logger = logging.getLogger(__name__)        
         self._model = SentenceTransformer(trf_model)
         if lang == "es":
             self._nlp_model = load_spacy("es_core_news_md")
@@ -695,7 +698,9 @@ class HermesEquivalencesGenerator(object):
         words: List[str],
         thr=0.9,
     ):  
-        
+        """
+        Group words based on similarities and save the results in a JSON file.
+        """
         # Perform PCA on the embeddings
         embeddings_X, _, _ = self._perform_pca(embeddings)
         
@@ -707,7 +712,7 @@ class HermesEquivalencesGenerator(object):
 
         thresholds = np.linspace(0.1, 0.9, 9)
         print(f'Calculating connected components for different thresholds: {thresholds}....')
-        results = []
+        stats = []
         for threshold in thresholds:
             adjacency_matrix = similarity_matrix > threshold
             np.fill_diagonal(adjacency_matrix, False)
@@ -726,10 +731,10 @@ class HermesEquivalencesGenerator(object):
             n_components_more = len(reduced_cluster_to_words)
             
             word_groups = list(cluster_to_words.values())
-            results.append((threshold, n_components, len(word_groups)))
+            #results.append((threshold, n_components, len(word_groups)))
             if len(set(labels)) > 1:
-                score = silhouette_score(embeddings, labels, metric='cosine')
-                dbi = davies_bouldin_score(embeddings, labels)
+                score = float(silhouette_score(embeddings, labels, metric='cosine'))
+                dbi = float(davies_bouldin_score(embeddings, labels))
                 self._logger.info(f'Silhouette Score: {score:.4f}')
                 print(f'Silhouette Score: {score:.4f}')
                 print(f'Davies-Bouldin Index: {dbi:.2f}')
@@ -737,6 +742,17 @@ class HermesEquivalencesGenerator(object):
                 score = -1
                 dbi = -1
                 print("Silhouette Score: No se puede calcular con solo un cluster.")
+            
+            # Generate JSON results for this threshold
+            stats.append({
+                "threshold": float(threshold),  # Convertir a float
+                "components": int(n_components),  # Convertir a int
+                "word_groups": len(word_groups),
+                "n_components_more": n_components_more,
+                "silhouette_score": score,
+                "davies_bouldin_index": dbi,
+            })
+            
             print(f'Threshold: {threshold:.2f}, Components: {n_components}, Word Groups: {len(word_groups)}, n_components_more: {n_components_more}, Silhouette Score: {score:.4f}')
             self._logger.info(f'Threshold: {threshold:.2f}, Components: {n_components}, Word Groups: {len(word_groups)}, n_components_more: {n_components_more}, Silhouette Score: {score:.4f}')
         
@@ -746,10 +762,10 @@ class HermesEquivalencesGenerator(object):
         n_components, labels = connected_components(adjacency_csr)
         
         if len(set(labels)) > 1:
-            score = silhouette_score(embeddings, labels, metric='cosine')
+            score = float(silhouette_score(embeddings, labels, metric='cosine'))
             self._logger.info(f'Silhouette Score: {score:.4f}')
             print(f'Silhouette Score: {score:.4f}')
-            dbi = davies_bouldin_score(embeddings, labels)
+            dbi = float(davies_bouldin_score(embeddings, labels))
             print(f'Davies-Bouldin Index: {dbi:.2f}')
         else:
             print("Silhouette Score: No se puede calcular con solo un cluster.")
@@ -760,7 +776,7 @@ class HermesEquivalencesGenerator(object):
             cluster_to_words[label].append(word)
         reduced_cluster_to_words = [words for label, words in cluster_to_words.items() if len(words) > 1]
         
-        return reduced_cluster_to_words
+        return reduced_cluster_to_words, stats
 
     def _train_module(
         self,
@@ -928,6 +944,7 @@ class HermesEquivalencesGenerator(object):
         if source not in ["vocabulary", "tm"]:
             raise ValueError("source must be either 'vocabulary' or 'tm'")
         
+        path_to_source = path_to_source or self.data_path
         if not pathlib.Path(path_to_source).exists():
             raise ValueError(f"Path to source {path_to_source} does not exist")
         
@@ -949,11 +966,6 @@ class HermesEquivalencesGenerator(object):
             #params_inference['mallet_path'] = "/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/src/topicmodeling/Mallet-202108/bin/mallet"
             params_inference['mallet_path'] = "/export/usuarios_ml4ds/cggamella/RAG_tool/src/topicmodeling/Mallet-202108/bin/mallet"
             
-            #print("El modelo es", model_type)
-            #print("Los parametros son", params_inference)
-            #print("Antes de llamar a create_model")
-            #import pdb; pdb.set_trace()
-            
             model = create_model(model_type, **params_inference)
             topics = model.print_topics(top_k=top_k)
             # keep top-k words from each topic
@@ -972,7 +984,8 @@ class HermesEquivalencesGenerator(object):
         #labels = self._get_clusters(embeddings)
         #cluster_to_words = self._get_words_by_cluster(labels, words)
         # word_groups = [cluster_to_words[el] for el in cluster_to_words ]
-        word_groups = self._get_words_by_cluster_sim(embeddings, words)
+        #import pdb; pdb.set_trace()
+        word_groups, stats = self._get_words_by_cluster_sim(embeddings, words)
         
         ######################################################################### 
         # Generate equivalences
@@ -1010,16 +1023,15 @@ class HermesEquivalencesGenerator(object):
                         key = key.replace(" ", "_")
                         if key != value:
                             word_list.append(f"{value}:{key}")
-        
-        import pdb; pdb.set_trace()
-
+        #import pdb; pdb.set_trace()
         result = []
         for _, row in df.iterrows():
             origin_words = row['origin']
             if not isinstance(origin_words, list):
                 origin_words = ast.literal_eval(origin_words)
+            origin_words_str = " ".join(origin_words)
             print(f"Las listas de palabras son {origin_words}")
-            eq_word = self.eq_module(origin_words) 
+            eq_word = self.eq_module(origin_words_str) 
             eq_word = eq_word.replace("«", "").replace("»", "")
             eq_word = eq_word.strip('"').strip("'")
             eq_word = eq_word.replace(" ", "_")
@@ -1045,17 +1057,6 @@ class HermesEquivalencesGenerator(object):
             "visibility": "Public",
             "wordlist": word_list_new
         }
-        
-        
-        path_save_old = path_save.parent / f"{path_save.stem}_old{path_save.suffix}"
-        path_save_new = path_save.parent / f"{path_save.stem}_new{path_save.suffix}"
-
-        # Escribir el primer JSON en path_save_old
-        with open(path_save_old, 'w', encoding='utf-8') as json_file:
-            json.dump(json_data_old, json_file, indent=4, ensure_ascii=False)
-
-        # Escribir el segundo JSON en path_save_new
-        with open(path_save_new, 'w', encoding='utf-8') as json_file:
-            json.dump(json_data_new, json_file, indent=4, ensure_ascii=False)
-        
+            
         print(f"Time elapsed in generation: {time.time() - time_start}")
+        return json_data_old, json_data_new, stats

@@ -4,6 +4,7 @@ import time
 import yaml
 import subprocess
 import shutil
+import json
 from src.acronyms.acronym_detector import HermesAcronymDetector
 from src.acronyms.acronym_expander import HermesAcronymExpander
 from src.equivalences.equivalences_generator import HermesEquivalencesGenerator
@@ -27,7 +28,7 @@ def main():
         "--llm_type",
         type=str,
         default="llama",
-        help="Type of large language model to use (llama or openai)") 
+        help="Type of large language model to use (llama, openai, mistral...)") 
     parser.add_argument(
         "--data_path",
         type=str,
@@ -81,17 +82,7 @@ def main():
         type=str,
         default="cpv45",
         help="Source of the data in the preproc file (config.json)")
-    parser.add_argument(
-        "--lang",
-        type=str,
-        default="es",
-        help="Language of the data")
-    parser.add_argument(
-        "--spacy_model",
-        type=str,
-        default="es_core_news_lg",
-        help="Spacy model to use for preprocessing")
-    
+
     ###############################################
     #         EQUIVALENCE DETECTION ARGUMENTS     #
     ###############################################
@@ -154,11 +145,12 @@ def main():
     if args.mode == "optimized":
         logger.info(f"-- -- Running HERMES pipeline in optimized mode...")
         path_root_save = pathlib.Path(args.save_path) / 'optimized'
+        model_name = config.get("llm", {}).get("model_type", "default_model")
+        # Añadir _nombre_modelo a la ruta
+        path_root_save = path_root_save / f"{model_name}"
         if not path_root_save.exists():
             path_root_save.mkdir(parents=True)
             
-        #import pdb; pdb.set_trace()
-
         #**********************************************************************
         # 1. Acronym Detection and Expansion
         #**********************************************************************
@@ -253,10 +245,11 @@ def main():
             df_out.to_parquet(path_save, index=False)
             logger.info(f"-- -- 1. Acronym Detection and Expansion output saved to {path_save.as_posix()}")  
             logger.info(f"-- -- Generating acronym expansion JSON...")
-            path_sal = '/export/usuarios_ml4ds/cggamella/RAG_tool/src/topicmodeling/data/acronyms/'
-            generate_acronym_expansion_json(path_save, path_sal)
-            logger.info(f"JSON with detected and expanded acronyms saved on {path_sal}")
-            
+            #path_sal = '/export/usuarios_ml4ds/cggamella/RAG_tool/src/topicmodeling/data/acronyms/'
+            path_save_acronym_expansion = path_root_save / '1.acronym_detection_expansion'
+            generate_acronym_expansion_json(path_save, path_save_acronym_expansion)
+            logger.info(f"JSON with detected and expanded acronyms saved on {path_save_acronym_expansion}")
+    
             #import pdb; pdb.set_trace()
             
         #***********************************************************************
@@ -274,17 +267,17 @@ def main():
         path_save = path_save / file_save
         
         if path_save.exists():
-            logger.info(f"-- -- Preprocessing output already exists at {path_save.as_posix()}")
+            logger.info(f"-- Preprocessing output already exists at {path_save.as_posix()}")
         else:
-            logger.info(f"-- -- Preprocessing output does not exist at {path_save.as_posix()}")
-            logger.info(f"-- -- Running Preprocessing...")
+            logger.info(f"-- Preprocessing output does not exist at {path_save.as_posix()}")
+            logger.info(f"-- Running Preprocessing...")
             time_start = time.time()
             
             do_lemmatization = config['preproc'].get('do_lemmatization', True)
             if do_lemmatization:
-                logger.info("-- -- Lemmatization is enabled.")
+                logger.info("-- Lemmatization is enabled. --")
             else:
-                logger.info("-- -- Lemmatization is disabled.")
+                logger.info("-- Lemmatization is disabled. --")
         
             cmd = [
                 "python", (config['preproc'].get('preprocessing_script')),
@@ -292,8 +285,8 @@ def main():
                 "--source_type", (config['preproc'].get('source_type')),
                 "--source", args.preproc_source,
                 "--destination_path", path_save.as_posix(),
-                "--lang", (args.lang),
-                "--spacy_model", (args.spacy_model),
+                "--lang", (config['preproc'].get('lang')),
+                "--spacy_model", (config['preproc'].get('spacy_model')),
                 "--do_embeddings"
             ]
             
@@ -334,9 +327,10 @@ def main():
         path_save_eqs_file = path_save_eqs / file_save
              
         eq_generator = HermesEquivalencesGenerator(
+            model_type = config['llm']['model_type'],
             use_optimized = True,
             do_train = True,
-            lang=args.lang
+            lang=config['preproc']['lang']
         )
     
         if args.source_eq == "vocabulary":
@@ -366,18 +360,18 @@ def main():
                 # Assign new values to the copied Namespace object
                 this_args.model_path = model_path.as_posix()
                 this_args.load_data_path = load_data_path.as_posix()
-                this_args.num_topics = config['equiv']['num_topics']
+                this_args.num_topics = config['equiv']['num_topics_equiv']
                 this_args.logger = logger
                                 
                 model = train_model(
                     model_path = model_path.as_posix(),
-                    model_type = config['equiv']['model_type'],
-                    num_topics = config['equiv']['num_topics'],
+                    model_type = config['equiv']['model_name'],
+                    num_topics = config['equiv']['num_topics_equiv'],
                     further_proc = config['equiv']['further_proc'],
                     logger = logger,
                     env = pathlib.Path(config['llm']['env']),
                     args = this_args,
-                    stw_path = path_root_save / "stops",
+                    stw_path = '/export/usuarios_ml4ds/cggamella/RAG_tool/data/FINAL_MODELS/stops',
                     eq_path = path_save_eqs_file
                 )
                 topics = model.print_topics()
@@ -386,16 +380,50 @@ def main():
                     print("Topic #", i)
                     print(topics[topic])
             
-            path_to_source = model_path / f"{config['equiv']['model_type']}_{config['equiv']['num_topics']}" / "vocabulary.txt" if args.source_eq == "vocabulary" else model_path / f"{config['equiv']['model_type']}_{config['equiv']['num_topics']}"
-            logger.info(f"-- -- Generating equivalences from vocabulary...")
-            eq_generator.generate_equivalences(
-                source = args.source_eq,
-                path_to_source = path_to_source,
-                path_save = this_path_save_eqs,
-                model_type = config['equiv']['model_type'],
-                language = args.lang,
-                top_k = config['equiv']['top_k'],
-            )
+            if args.source_eq == "vocabulary":
+                path_to_source = (
+                    model_path /
+                    f"{config['equiv']['model_name']}_{config['equiv']['num_topics_equiv']}" /
+                    "vocabulary.txt"
+                )
+            else:
+                path_to_source = (
+                    model_path /
+                    f"{config['equiv']['model_name']}_{config['equiv']['num_topics_equiv']}"
+                ) 
+            
+            try:
+                logger.info(f"-- -- Generating equivalences from {args.source_eq}...") 
+
+                json_data_old, json_data_new, stats = eq_generator.generate_equivalences(
+                    source=args.source_eq,
+                    path_to_source=path_to_source,
+                    path_save=this_path_save_eqs,
+                    model_type=config['equiv']['model_name'],
+                    language=config['preproc']['lang'],
+                    top_k=config['equiv']['top_k'],
+                )
+                
+                # Paths to save the JSON files
+                path_save_old = path_save_eqs.with_name(f"{path_save_eqs.stem}_old{path_save_eqs.suffix}.json")
+                path_save_new = path_save_eqs.with_name(f"{path_save_eqs.stem}_new{path_save_eqs.suffix}.json")
+                path_save_stats = path_save_eqs.with_name(f"{path_save_eqs.stem}_stats.json")
+
+                with open(path_save_old, 'w', encoding='utf-8') as json_file:
+                    json.dump(json_data_old, json_file, indent=4, ensure_ascii=False)
+                logger.info(f"-- -- Old equivalences saved to {path_save_old}")
+                with open(path_save_new, 'w', encoding='utf-8') as json_file:
+                    json.dump(json_data_new, json_file, indent=4, ensure_ascii=False)
+                logger.info(f"-- -- New equivalences saved to {path_save_new}")
+                
+                # Save statistics of clustering in a JSON file
+                with open(path_save_stats, 'w', encoding='utf-8') as json_file:
+                    json.dump(stats, json_file, indent=4, ensure_ascii=False)
+                logger.info(f"-- -- Paper equivalences statistics saved to {path_save_stats}")
+                logger.info(f"-- -- Equivalences generation completed successfully.")
+
+            except Exception as e:
+                logger.error(f"Error during equivalence generation or saving: {e}")
 
             logger.info(f"-- -- Equivalences saved to {this_path_save_eqs}")
         
@@ -427,18 +455,18 @@ def main():
                         # Assign new values to the copied Namespace object
                         this_args.model_path = model_path.as_posix()
                         this_args.load_data_path = load_data_path.as_posix()
-                        this_args.num_topics = config['equiv']['num_topics']
+                        this_args.num_topics = config['equiv']['num_topics_equiv']
                         this_args.logger = logger
                                         
                         model = train_model(
                             model_path = model_path.as_posix(),
-                            model_type = config['equiv']['model_type'],
-                            num_topics = config['equiv']['num_topics'],
+                            model_type = config['equiv']['model_name'],
+                            num_topics = config['equiv']['num_topics_equiv'],
                             further_proc = config['equiv']['further_proc'],
                             logger = logger,
                             env = pathlib.Path(config['llm']['env']),
                             args = this_args,
-                            stw_path = path_root_save / "stops",
+                            stw_path = '/export/usuarios_ml4ds/cggamella/RAG_tool/data/FINAL_MODELS/stops',
                             eq_path = path_save_eqs
                         )
                         topics = model.print_topics()
@@ -447,19 +475,40 @@ def main():
                             print("Topic #", i)
                             print(topics[topic])
                     
-                    path_to_source = model_path / f"{config['equiv']['model_type']}_{config['equiv']['num_topics']}" / "vocabulary.txt" if args.source_eq == "vocabulary" else model_path / f"{config['equiv']['model_type']}_{config['equiv']['num_topics']}"
+                    path_to_source = model_path / f"{config['equiv']['model_name']}_{config['equiv']['num_topics_equiv']}" / "vocabulary.txt" if args.source_eq == "vocabulary" else model_path / f"{config['equiv']['model_name']}_{config['equiv']['num_topics_equiv']}"
 
-                    logger.info(f"-- -- Generating equivalences from {args.source_eq}...")
-                    eq_generator.generate_equivalences(
-                        source = args.source_eq,
-                        path_to_source = path_to_source,
-                        path_save = this_path_save_eqs,
-                        model_type = config['equiv']['model_type'],
-                        language = config['equiv']['language'],
-                        top_k = config['equiv']['top_k'],
-                    )
+                    try:
+                        logger.info(f"-- -- Generating equivalences from {args.source_eq}...") 
 
-                    logger.info(f"-- -- Equivalences saved to {this_path_save_eqs}")
+                        json_data_old, json_data_new, stats = eq_generator.generate_equivalences(
+                            source=args.source_eq,
+                            path_to_source=path_to_source,
+                            path_save=this_path_save_eqs,
+                            model_type=config['equiv']['model_name'],
+                            language=config['preproc']['lang'],
+                            top_k=config['equiv']['top_k'],
+                        )
+                        
+                        # Paths to save the JSON files
+                        path_save_old = path_save_eqs.with_name(f"{path_save_eqs.stem}_old{path_save_eqs.suffix}.json")
+                        path_save_new = path_save_eqs.with_name(f"{path_save_eqs.stem}_new{path_save_eqs.suffix}.json")
+                        path_save_stats = path_save_eqs.with_name(f"{path_save_eqs.stem}_stats.json")
+
+                        with open(path_save_old, 'w', encoding='utf-8') as json_file:
+                            json.dump(json_data_old, json_file, indent=4, ensure_ascii=False)
+                        logger.info(f"-- -- Old equivalences saved to {path_save_old}")
+                        with open(path_save_new, 'w', encoding='utf-8') as json_file:
+                            json.dump(json_data_new, json_file, indent=4, ensure_ascii=False)
+                        logger.info(f"-- -- New equivalences saved to {path_save_new}")
+                        
+                        # Save statistics of clustering in a JSON file
+                        with open(path_save_stats, 'w', encoding='utf-8') as json_file:
+                            json.dump(stats, json_file, indent=4, ensure_ascii=False)
+                        logger.info(f"-- -- Paper equivalences statistics saved to {path_save_stats}")
+                        logger.info(f"-- -- Equivalences generation completed successfully.")
+
+                    except Exception as e:
+                        logger.error(f"Error during equivalence generation or saving: {e}")
 
         else:
             logger.error(f"-- -- Source of equivalences not recognized. Please provide a valid source.")
@@ -529,7 +578,7 @@ def main():
                         logger = logger,
                         env = pathlib.Path(config['llm']['env']),
                         args = this_args,
-                        stw_path = path_root_save / "stops",
+                        stw_path = '/export/usuarios_ml4ds/cggamella/RAG_tool/data/FINAL_MODELS/stops',
                         eq_path = path_save_eqs
                     )
                     topics = model.print_topics()
@@ -546,7 +595,7 @@ def main():
             path_root_save.mkdir(parents=True)
             
         #***********************************************************************
-        # 1. Preprocessing
+        # 2. Preprocessing
         #***********************************************************************
         logger.info("#"*80)
         logger.info(f"### 2. Preprocessing ###")

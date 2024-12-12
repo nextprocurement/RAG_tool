@@ -204,7 +204,7 @@ class TopicModel(ABC):
             #import pdb; pdb.set_trace()
             stopwords_tfidf = generate_dynamic_stopwords(texts, percentage_below_mean=0.2)
             self._logger.info(f"-- -- The number of stopwords is {len(stopwords_tfidf)} based on TF-IDF")
-            # Save stopwords 
+            # Save stopwords
             stopwords_file = self.save_path / "stopwords_tfidf.txt"
             with stopwords_file.open("w", encoding="utf8") as f:
                 f.write("\n".join(stopwords_tfidf))
