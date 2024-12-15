@@ -278,7 +278,7 @@ def main():
                 logger.info("-- Lemmatization is enabled. --")
             else:
                 logger.info("-- Lemmatization is disabled. --")
-        
+            import pdb; pdb.set_trace()
             cmd = [
                 "python", (config['preproc'].get('preprocessing_script')),
                 "--source_path", source_path.as_posix(),
@@ -299,6 +299,8 @@ def main():
             except subprocess.CalledProcessError as e:
                 logger.info('-- -- Preprocessing failed. Revise command')
                 logger.info(e.output)
+            import pdb; pdb.set_trace()
+
             
             logger.info(f"-- -- Preprocessing done in {(time.time() - time_start)/60} minutes. Saving output...")
             logger.info(f"-- -- 2. Preprocessing output saved to {path_save.as_posix()}")

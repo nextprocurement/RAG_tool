@@ -13,7 +13,7 @@ llm:
 
 # ACRONYM Configuration
 acr:
-  data_column_name: "objective"  # Column name to read, can be 'objective','text', 'title', 'texto_sin_preprocesar', etc...
+  data_column_name: "text"  # Column name to read, can be 'objective','text', 'title', 'texto_sin_preprocesar'->PLACE
   train_all_modules: false  # If is true, all modules will be trained, if is false, only the modules in the list modules_to_train will be trained
   modules_to_train:  # List of modules to train
     #- HermesAcronymExpander
@@ -21,15 +21,15 @@ acr:
 
 # Preprocessing Configuration
 preproc:
-  preprocessing_script: "/export/usuarios_ml4ds/lbartolome/Repos/repos_con_carlos/RAG_tool/src/preprocessing/pipe/nlpipe.py"
+  preprocessing_script: "/export/usuarios_ml4ds/cggamella/RAG_tool/src/preprocessing/pipe/nlpipe.py"
   source_type : "parquet"
-  spacy_model : "es_core_news_lg" #en_core_web_lg
-  lang : "es" # "en" or "es"
-  do_lemmatization: true #New parameter to enable lemmatization in the preprocessing
+  spacy_model : "en_core_web_lg" #en_core_web_lg, es_core_news_lg
+  lang : "en" # "en" or "es"
+  do_lemmatization: true #New parameter to disable lemmatization in the preprocessing
 
 equiv:
   path_results: "/export/usuarios_ml4ds/cggamella/RAG_tool/data/FINAL_MODELS/"
-  num_topics_equiv : 100 # It's recommended to use 100 or any big number to find more equivalences
+  num_topics_equiv : 20 # It's recommended to use 100 or any big number to find more equivalences
   further_proc: True
   model_name: "MalletLda"
-  top_k : 100 
+  top_k : 15 

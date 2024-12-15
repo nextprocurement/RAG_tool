@@ -65,7 +65,7 @@ if __name__ == "__main__":
         # Initialize and use HermesAcronymDetector
         ########################################
         # Path to trained model json file with dspy
-        trained_promt_detector = pathlib.Path("data/optimized/HermesAcronymDetector-saved.json")
+        trained_promt_detector = pathlib.Path("data/optimized_new_DSPy/HermesAcronymDetector-saved.json")
         # Verify if the model should be trained
         should_train = do_train or "HermesAcronymDetector" in (config.get('modules_to_train') or [])
 
@@ -74,18 +74,11 @@ if __name__ == "__main__":
             logger.info("Entrenando y usando HermesAcronymDetector...")
             detector = HermesAcronymDetector(
                 model_type=args.llm_type,
-                do_train=True,
+                do_train=False,
                 data_path=args.data_path,
                 trained_promt=trained_promt_detector,
                 logger=logger
             )
-            '''
-            # Configure the module to use the Retry transformation with a maximum of 2 backtracks
-            detector.module = assert_transform_module(
-                detector.module.map_named_predictors(dspy.Retry),
-                functools.partial(backtrack_handler, max_backtracks=5) 
-            )
-            '''
             # After training, verify if the model was saved correctly
             if not trained_promt_detector.exists():
                 logger.error(f"El modelo entrenado no se guardó correctamente en {trained_promt_detector}.")
@@ -101,12 +94,6 @@ if __name__ == "__main__":
                     trained_promt=trained_promt_detector,
                     logger=logger
                 )
-                '''
-                detector.module = assert_transform_module(
-                    detector.module.map_named_predictors(dspy.Retry),
-                    functools.partial(backtrack_handler, max_backtracks=2) 
-                )
-                '''
             else:
                 # If the model don´t have trained_promt, raise an error
                 logger.error(f"No se encontró el modelo entrenado en {trained_promt_detector}. Considera entrenarlo primero.")
@@ -121,7 +108,7 @@ if __name__ == "__main__":
         should_train = do_train or "HermesAcronymExpander" in (config.get('modules_to_train') or [])
         
         # Path to trained model json file with dspy
-        trained_promt_expander = pathlib.Path("data/optimized/HermesAcronymExpander-saved.json")
+        trained_promt_expander = pathlib.Path("data/optimized_new_DSPy/HermesAcronymExpander-saved.json")
 
         if should_train:
             # Train the model
@@ -171,7 +158,7 @@ if __name__ == "__main__":
     try:
         df_out = process_dataframe(
             path=args.data_path,
-            config=config,
+            config=config['acr'],
             action=args.action,
             acronym_detector=detector.module if detector else None,
             acronym_expander=expander.module if expander else None,
@@ -203,9 +190,9 @@ if __name__ == "__main__":
     logger.info(f"DataFrame procesado con la acción '{args.action}' y guardado en {path_out}")
     
     # Generate JSON with detected and expanded acronyms only with both args
-    if args.action == "both":
-        path_sal = '/export/usuarios_ml4ds/cggamella/RAG_tool/src/topicmodeling/data/acronyms/'
-        generate_acronym_expansion_json(path_out, path_sal)
-        logger.info(f"JSON with detected and expanded acronyms saved on {path_sal}")
+    #if args.action == "both":
+        #path_sal = '/export/usuarios_ml4ds/cggamella/RAG_tool/src/topicmodeling/data/acronyms/'
+        #generate_acronym_expansion_json(path_out, path_sal)
+        #logger.info(f"JSON with detected and expanded acronyms saved on {path_sal}")
     
     

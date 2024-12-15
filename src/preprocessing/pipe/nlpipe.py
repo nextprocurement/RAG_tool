@@ -63,19 +63,16 @@ def main():
     # Create logger object
     logging.basicConfig(level='INFO')
     logger = logging.getLogger('nlpPipeline')
-
     # Check that either NLP preprocessing or embeddings calculation is activated
     if args.no_preproc and not args.do_embeddings:
         logger.error(
             f"-- Either the flag for NLP preprocessing or that for the embeddings calculation need to be activated in order to proceed. Exiting... ")
         sys.exit()
-
     # Check that the language is valid
     if args.lang not in ['en', 'es']:
         logger.error(
             f"-- The language {args.lang} is not supported by the tool. Exiting... ")
         sys.exit()
-
     # Check that the source file exists
     if pathlib.Path(args.source_path).exists():
         source_path = pathlib.Path(args.source_path)
@@ -166,7 +163,6 @@ def main():
             logger.error(
                 f"-- Unsupported source type: {args.source_type}. Exiting...")
             sys.exit()
-
         # Detect abstracts' language and filter out those that are not in the language specified in args.lang
         logger.info(f"-- Detecting language...")
         fld_lan = raw_text_fld[0] if isinstance(raw_text_fld, list) else raw_text_fld
@@ -180,7 +176,6 @@ def main():
             df = df[df[fld_lan].apply(det) == args.lang]
         logger.info(
             f'-- -- Language detection finished in {(time.time() - start_time)}')
-
         raw_txt_flds = ['raw_text']
         # Concatenate title + abstract/summary if title is given
         if title_fld != "" and not isinstance(raw_text_fld, list):

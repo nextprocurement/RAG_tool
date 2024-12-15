@@ -380,7 +380,6 @@ class TopicModel(ABC):
                 return coherence_model.get_coherence()
             except Exception as e:
                 print(e)
-                #import pdb; pdb.set_trace()
         
         dictionary = Dictionary(ref_text_sample)
         filtered_keys = filter_unseen_tokens(keys, dictionary)

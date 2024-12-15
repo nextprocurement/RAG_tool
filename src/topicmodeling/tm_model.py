@@ -197,7 +197,7 @@ class TMmodel(object):
 
         # Determinar el idioma predominante (más del 85%)
         predominant_language, predominant_count = language_counts.most_common(1)[0]
-        if predominant_count / total_detected >= 0.85:
+        if predominant_count / total_detected >= 0.75:
             if predominant_language == Language.SPANISH:
                 lang = "es"
                 file_path = "/export/usuarios_ml4ds/cggamella/RAG_tool/data/dump/eswiki-latest-abstract.xml.gz"
@@ -208,7 +208,7 @@ class TMmodel(object):
                 self._logger.error(f"Unsupported predominant language detected: {predominant_language}")
                 return
         else:
-            self._logger.error("No predominant language detected with >90% confidence.")
+            self._logger.error("No predominant language detected with >0.75% confidence.")
             return
 
         self._logger.info(f"Idioma predominante detectado:{predominant_language}.")  

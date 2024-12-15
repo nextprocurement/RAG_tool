@@ -97,7 +97,6 @@ class EquivalencesDataset(Dataset):
 class Equivalent(dspy.Signature):
     """
     Unify a list of words in a single word in singular form.
-    
     ----------------------------------------------------------------------------
     Examples
     --------

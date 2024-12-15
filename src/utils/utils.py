@@ -157,7 +157,6 @@ def process_dataframe(
     """
     # Initialize NERTextAnalyzer
     ner_analyzer = NERTextAnalyzer()
-    
     # Obtain the column name from the configuration file
     column_name = config['data_column_name']
     print("Column name: ", column_name)
@@ -193,7 +192,7 @@ def process_dataframe(
 
         # Perform detection if action is "detect" or "both"
         if action in ["detect", "both"] and acronym_detector:
-            for id_chunk, chunk in chunker(text):  
+            for id_chunk, chunk in chunker(text):
                 prediction = acronym_detector.forward(chunk)
                 acronyms = clean_acronyms(prediction.ACRONYMS)
                 acronyms_list = acronyms.lower().split(',')

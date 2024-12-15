@@ -9,6 +9,11 @@
         "raw_text": "texto_sin_preprocesar",
         "title": ""
     },
+    "SC2-AI": {
+        "id": "id_tm",
+        "raw_text": "text_substituted",
+        "title": ""
+    },
     "objective_non_optimized": {
         "id": "id_tm",
         "raw_text": "objective",

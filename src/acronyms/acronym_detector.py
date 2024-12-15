@@ -6,6 +6,7 @@ import ujson
 import pandas as pd
 import pathlib
 from time import sleep
+from typing import Optional
 from sklearn.model_selection import train_test_split
 from dspy.teleprompt import BootstrapFewShotWithRandomSearch
 
@@ -27,7 +28,7 @@ class AcronymDetector(dspy.Signature):
     """
     TEXT = dspy.InputField()
     ACRONYMS = dspy.OutputField(desc="list of comma-separated acronyms", format=lambda x: ', '.join(x) if isinstance(x, list) else x)
-
+    
 
 class AcronymDetectorModule(dspy.Module):
     def __init__(self):
@@ -165,7 +166,7 @@ class HermesAcronymDetector:
                 self._logger.error("Trained prompt not found. Exiting.")
                 return
             self.module = AcronymDetectorModule()
-            self.module.load(trained_promt, use_legacy_loading=True)
+            self.module.load(trained_promt) # use_legacy_loading=True
             self._logger.info(f"AcronymDetectorModule loaded from {trained_promt}")
         else:
             if not data_path:

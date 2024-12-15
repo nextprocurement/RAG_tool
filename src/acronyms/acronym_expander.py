@@ -248,7 +248,7 @@ class HermesAcronymExpander(object):
                 self._logger.error("Trained prompt not found. Exiting.")
                 return
             self.module = AcronymExpanderModule()
-            self.module.load(trained_promt, use_legacy_loading=True)
+            self.module.load(trained_promt) #use_legacy_loading=True
             self._logger.info(f"AcronymExpanderModule loaded from {trained_promt}") 
         else:
             if not data_path:
