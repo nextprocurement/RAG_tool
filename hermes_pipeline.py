@@ -104,7 +104,7 @@ def main():
     parser.add_argument(
         "--num_topics",
         help="Number of topics",
-        type=str, default="5,10", required=False)
+        type=str, default="5,10,15,20,30", required=False)
     parser.add_argument(
         "--num_iters",
         help="Number of iterations",
@@ -249,9 +249,7 @@ def main():
             path_save_acronym_expansion = path_root_save / '1.acronym_detection_expansion'
             generate_acronym_expansion_json(path_save, path_save_acronym_expansion)
             logger.info(f"JSON with detected and expanded acronyms saved on {path_save_acronym_expansion}")
-    
-            #import pdb; pdb.set_trace()
-            
+                
         #***********************************************************************
         # 2. Preprocessing
         #***********************************************************************
@@ -278,7 +276,7 @@ def main():
                 logger.info("-- Lemmatization is enabled. --")
             else:
                 logger.info("-- Lemmatization is disabled. --")
-            import pdb; pdb.set_trace()
+            
             cmd = [
                 "python", (config['preproc'].get('preprocessing_script')),
                 "--source_path", source_path.as_posix(),
@@ -289,19 +287,15 @@ def main():
                 "--spacy_model", (config['preproc'].get('spacy_model')),
                 "--do_embeddings"
             ]
-            
+             
             if not do_lemmatization:
                 cmd.append('--no_lemmatization')
-            #import pdb; pdb.set_trace()
             try:
                 logger.info(f'-- -- Running preprocessing command {" ".join(cmd)}')
                 subprocess.check_output(cmd)
             except subprocess.CalledProcessError as e:
                 logger.info('-- -- Preprocessing failed. Revise command')
-                logger.info(e.output)
-            import pdb; pdb.set_trace()
-
-            
+                logger.info(e.output)            
             logger.info(f"-- -- Preprocessing done in {(time.time() - time_start)/60} minutes. Saving output...")
             logger.info(f"-- -- 2. Preprocessing output saved to {path_save.as_posix()}")
             
@@ -318,16 +312,31 @@ def main():
             path_save.mkdir(parents=True)
             
         path_save_eqs = path_save / 'equivalences_lst'
+        #import pdb; pdb.set_trace()
         
         if not path_save_eqs.exists():
-            logger.info(f"-- -- Creating directory {path_save_eqs}")
             path_save_eqs.mkdir(parents=True)
-        else:
-            logger.info(f"-- -- Directory {path_save_eqs} already exists")        
+            print(f"Directorio creado: {path_save_eqs}")
         
+        path_origen = path_root_save / '1.acronym_detection_expansion'
+        archivos_json = list(path_origen.glob("*.json"))
+        
+        if not archivos_json:
+            print(f"No se encontraron archivos .json en: {path_origen}")
+            return
+        #import pdb; pdb.set_trace()
+        for archivo in archivos_json:
+            try:
+                destino = path_save_eqs
+                # Copiar el archivo
+                shutil.copy(archivo, destino)
+                print(f"Copiado: {archivo} --> {destino}")
+            except Exception as e:
+                print(f"Error al copiar {archivo}: {e}")
+              
         file_save = pathlib.Path(args.data_path).stem + '.json'
         path_save_eqs_file = path_save_eqs / file_save
-             
+        #import pdb; pdb.set_trace()
         eq_generator = HermesEquivalencesGenerator(
             model_type = config['llm']['model_type'],
             use_optimized = True,
@@ -435,7 +444,7 @@ def main():
         
             for t in range(args.times_equiv):
                 
-                this_path_save_eqs = path_save_eqs_file.parent / f"{path_save_eqs_file.stem}_{t+1}.json"
+                this_path_save_eqs = path_save_eqs.parent / f"{path_save_eqs.stem}_{t+1}.json"
                 
                 if not this_path_save_eqs.exists():
                     
@@ -492,10 +501,10 @@ def main():
                         )
                         
                         # Paths to save the JSON files
-                        path_save_old = path_save_eqs.with_name(f"{path_save_eqs.stem}_old{path_save_eqs.suffix}.json")
-                        path_save_new = path_save_eqs.with_name(f"{path_save_eqs.stem}_new{path_save_eqs.suffix}.json")
-                        path_save_stats = path_save_eqs.with_name(f"{path_save_eqs.stem}_stats.json")
-
+                        path_save_old = path_save_eqs / f"{path_save_eqs.stem}_old.json"
+                        path_save_new = path_save_eqs / f"{path_save_eqs.stem}_new.json"         
+                        path_save_stats = path_save_eqs.parent / f"{path_save_eqs.stem}_stats.json"
+                        
                         with open(path_save_old, 'w', encoding='utf-8') as json_file:
                             json.dump(json_data_old, json_file, indent=4, ensure_ascii=False)
                         logger.info(f"-- -- Old equivalences saved to {path_save_old}")

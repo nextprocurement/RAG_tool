@@ -175,8 +175,9 @@ class TMmodel(object):
         self._logger.info("-- -- descriptions")
         self.calculate_gensim_dic()
         print("Coherence al crear el TMmodel:")
+        
         # Parámetros para calcular coherencia
-        coherence_measure = 'c_v'  
+        coherence_measure = 'c_v'   
         top_n = 15
         
         # Detectar el idioma del modelo con langdetect 
@@ -184,8 +185,8 @@ class TMmodel(object):
         detector = LanguageDetectorBuilder.from_languages(*languages).build()
         #idiomas_detectados = detector.detect_languages_in_parallel_of(df['text'].tolist())
         
-        # Seleccionar 50 palabras aleatorias del vocabulario
-        sample_size = min(50, len(vocab))  
+        # Seleccionar 100 palabras aleatorias del vocabulario
+        sample_size = min(100, len(vocab))  
         random_words = random.sample(vocab, sample_size)
 
         # Detectar idioma para cada palabra
@@ -195,8 +196,9 @@ class TMmodel(object):
         language_counts = Counter(detected_languages)
         total_detected = sum(language_counts.values())
 
-        # Determinar el idioma predominante (más del 85%)
+        # Determinar el idioma predominante (más del 75%)
         predominant_language, predominant_count = language_counts.most_common(1)[0]
+        #import pdb; pdb.set_trace()
         if predominant_count / total_detected >= 0.75:
             if predominant_language == Language.SPANISH:
                 lang = "es"
@@ -208,11 +210,10 @@ class TMmodel(object):
                 self._logger.error(f"Unsupported predominant language detected: {predominant_language}")
                 return
         else:
-            self._logger.error("No predominant language detected with >0.75% confidence.")
+            self._logger.error("No predominant language detected with >0.65% confidence.")
             return
 
-        self._logger.info(f"Idioma predominante detectado:{predominant_language}.")  
-        self._logger.info(f"Calculando la coherencia en {predominant_language}...")
+        self._logger.info(f"Idioma predominante detectado para calcular coherencia:{predominant_language}.")  
         measure_name, mean_coherence, topic_coherences = self.calculate_topic_coherence(
             coherence_measure=coherence_measure,
             top_n=top_n,
@@ -227,7 +228,7 @@ class TMmodel(object):
         print(f"Measure Name: {self.measure_name}")
         print(f"Mean Coherence: {self.mean_coherence}")
         print(f"Topic Coherences: {self.topic_coherences}")
- 
+      
         #self._tpc_labels = [el[1] for el in self.get_tpc_labels()]
         #self._tpc_embeddings = self.get_tpc_word_descriptions_embeddings()
         self._calculate_sims()
@@ -548,7 +549,7 @@ class TMmodel(object):
         '''
 
         self._logger.info("Starting coherence calculation {coherence_measure}...")
-
+        #import pdb; pdb.set_trace()
         # Load chemical descriptions of the topics
         if self._tpc_descriptions is None:
             # Get the topic descriptions as strings
@@ -558,6 +559,9 @@ class TMmodel(object):
         topics_ = [desc.split(', ')[:top_n] for desc in self._tpc_descriptions]
         self._logger.info("Topic descriptions converted to lists.")
         reference_text = self._load_reference_text(file_path)
+        # Keep only reference_text with content
+        reference_text = [doc for doc in reference_text if len(doc) > 0]
+
         vocab = Dictionary(reference_text)
         self._logger.info("Dictionary created from reference text.")
         #import pdb; pdb.set_trace()
