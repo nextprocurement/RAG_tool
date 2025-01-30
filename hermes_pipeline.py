@@ -145,6 +145,7 @@ def main():
     if args.mode == "optimized":
         logger.info(f"-- -- Running HERMES pipeline in optimized mode...")
         path_root_save = pathlib.Path(args.save_path) / 'optimized'
+        #path_root_save_checkpoint = pathlib.Path(args.save_path) / 'checkpoints'
         model_name = config.get("llm", {}).get("model_type", "default_model")
         # Añadir _nombre_modelo a la ruta
         path_root_save = path_root_save / f"{model_name}"
@@ -312,7 +313,6 @@ def main():
             path_save.mkdir(parents=True)
             
         path_save_eqs = path_save / 'equivalences_lst'
-        #import pdb; pdb.set_trace()
         
         if not path_save_eqs.exists():
             path_save_eqs.mkdir(parents=True)
@@ -324,7 +324,7 @@ def main():
         if not archivos_json:
             print(f"No se encontraron archivos .json en: {path_origen}")
             return
-        #import pdb; pdb.set_trace()
+
         for archivo in archivos_json:
             try:
                 destino = path_save_eqs
@@ -336,7 +336,7 @@ def main():
               
         file_save = pathlib.Path(args.data_path).stem + '.json'
         path_save_eqs_file = path_save_eqs / file_save
-        #import pdb; pdb.set_trace()
+
         eq_generator = HermesEquivalencesGenerator(
             model_type = config['llm']['model_type'],
             use_optimized = True,
@@ -645,7 +645,7 @@ def main():
             ]
             if not do_lemmatization:
                 cmd.append('--no_lemmatization')
-            #import pdb; pdb.set_trace()
+
             try:
                 logger.info(f'-- -- Running preprocessing command {" ".join(cmd)}')
                 subprocess.check_output(cmd)

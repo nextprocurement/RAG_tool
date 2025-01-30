@@ -61,9 +61,9 @@ if __name__ == "__main__":
     
     detector = None
     if args.action in ["detect", "both"]:
-        ########################################
+        ############################################
         # Initialize and use HermesAcronymDetector
-        ########################################
+        ############################################
         # Path to trained model json file with dspy
         trained_promt_detector = pathlib.Path("data/optimized_new_DSPy/HermesAcronymDetector-saved.json")
         # Verify if the model should be trained
@@ -165,7 +165,8 @@ if __name__ == "__main__":
             context_window=args.context_window,
             max_windows=args.max_windows,
             window_overlap=args.window_overlap,
-            logger=logger
+            logger=logger,
+            save_directory=config['acr']['save_directory']
         )
     except Exception as e:
         logger.error(f"Error occured processing dataframe: {str(e)}")

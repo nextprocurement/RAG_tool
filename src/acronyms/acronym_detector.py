@@ -142,7 +142,7 @@ class HermesAcronymDetector:
             #self.lm = dspy.HFClientTGI(model="meta-llama/Meta-Llama-3-8B ",port=8090, url="http://127.0.0.1")
             self.lm = dspy.LM(
                 "ollama_chat/llama3.1:8b-instruct-q8_0",# también puede ser llama3.2
-                api_base="http://kumo01:11434"  # Dirección base de tu API
+                api_base="http://kumo01:11434"  
             )
         elif model_type == "openai":
             load_dotenv(path_open_api_key)

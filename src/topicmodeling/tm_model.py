@@ -214,6 +214,7 @@ class TMmodel(object):
             return
 
         self._logger.info(f"Idioma predominante detectado para calcular coherencia:{predominant_language}.")  
+
         measure_name, mean_coherence, topic_coherences = self.calculate_topic_coherence(
             coherence_measure=coherence_measure,
             top_n=top_n,
@@ -1156,3 +1157,4 @@ class TMmodel(object):
         }
         df = pd.DataFrame(data)
         return df, self._vocab_id2w, self._vocab
+                                   

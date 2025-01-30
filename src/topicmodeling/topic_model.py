@@ -42,6 +42,7 @@ from src.topicmodeling.utils import (file_lines, load_processed_data, pickler,ge
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
+
 class TopicModel(ABC):
 
     def __init__(
@@ -209,9 +210,10 @@ class TopicModel(ABC):
             with stopwords_file.open("w", encoding="utf8") as f:
                 f.write("\n".join(stopwords_tfidf))
             
+            tqdm.pandas()
             start_time = time.time()
             self._logger.info(f"-- -- Applying further processing to the data")
-            df['lemmas'] = df['lemmas'].apply(lambda row: tkz_clean_str(row, stops_path=stops_path, eqs_path=eqs_path, stopwords_tfidf=stopwords_tfidf))
+            df['lemmas'] = df['lemmas'].progress_apply(lambda row: tkz_clean_str(row, stops_path=stops_path, eqs_path=eqs_path, stopwords_tfidf=stopwords_tfidf))
             self._logger.info(f"-- -- Further processing done in {(time.time() - start_time) / 60} minutes. Saving to {preproc_file}")
             
             # filter words with less than 3 characters
