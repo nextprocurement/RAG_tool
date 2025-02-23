@@ -3,8 +3,7 @@
 Authors: Jerónimo Arenas-García, J.A. Espinosa-Melchor, Lorena Calvo-Bartolomé, Carlos González Gamella
 Modifed: 24/01/2024 (Updated for NP-Solr-Service (NextProcurement Proyect))
 Modified: 11/02/2024 (Updated for NP-Search-Tool (NextProcurement Proyect) to include topic labelling method based on OpenAI's GPT-X models)
-Modified: 04/12/2024 (Updated coherence calculation with refence text dumped from the wikipedia for
-spanish and english text coherence calculation automated with language detection)
+Modified: 04/12/2024 (Updated coherence calculation with refence text dumped from the wikipedia for spanish and english text coherence calculation automated with language detection)
 """
 
 import shutil
@@ -1157,4 +1156,3 @@ class TMmodel(object):
         }
         df = pd.DataFrame(data)
         return df, self._vocab_id2w, self._vocab
-                                   

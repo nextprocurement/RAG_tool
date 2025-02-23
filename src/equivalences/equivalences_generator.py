@@ -288,7 +288,8 @@ class TransformModule(dspy.Module):
             new_key = self._remove_roman_numerals(key)
 
             eq_dict = {new_key: []}
-            values = [v.strip() for v in el[key].split(",") if v.strip() and v.strip() != key]
+            el_list = el[key].split(",") if isinstance(el[key], str) else el[key]
+            values = [v.strip() for v in el_list if v.strip() and v.strip() != key]
 
             for val in values:
                 new_key = self._process_value(
@@ -521,7 +522,8 @@ class HermesEquivalencesGenerator(object):
         if model_type == "llama":
             #self.lm = dspy.HFClientTGI(model="meta-llama/Meta-Llama-3-8B ",port=8090, url="http://127.0.0.1")
             self.lm = dspy.LM(
-                "ollama_chat/llama3.1:8b-instruct-q8_0",# también puede ser llama3.2
+                #"ollama_chat/llama3.1:8b-instruct-q8_0",# también puede ser llama3.2
+                "ollama_chat/qwen2.5:32b",
                 api_base="http://kumo01:11434"  # Dirección base de tu API
             )
         elif model_type == "openai":

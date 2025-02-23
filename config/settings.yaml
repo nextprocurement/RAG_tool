@@ -30,7 +30,7 @@ preproc:
 
 equiv:
   path_results: "/export/usuarios_ml4ds/cggamella/RAG_tool/data/FINAL_MODELS/"
-  num_topics_equiv : 10 # It's recommended to use 100 or any big number to find more equivalences
+  num_topics_equiv : 100 # It's recommended to use 100 or any big number to find more equivalences
   further_proc: True
   model_name: "MalletLda"
   top_k : 15 
