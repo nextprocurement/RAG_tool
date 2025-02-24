@@ -175,9 +175,13 @@ class TMmodel(object):
         self.calculate_gensim_dic()
         print("Coherence al crear el TMmodel:")
         
-        # Parámetros para calcular coherencia
         coherence_measure = 'c_v'   
         top_n = 15
+        file_path = self._TMfolder.parent.joinpath('modelFiles', 'corpus.txt') 
+        
+        """
+        # Parámetros para calcular coherencia
+        
         
         # Detectar el idioma del modelo con langdetect 
         languages = [Language.ENGLISH, Language.SPANISH] #Language.BASQUE, Language.CATALAN
@@ -213,7 +217,8 @@ class TMmodel(object):
             return
 
         self._logger.info(f"Idioma predominante detectado para calcular coherencia:{predominant_language}.")  
-
+        """
+        
         measure_name, mean_coherence, topic_coherences = self.calculate_topic_coherence(
             coherence_measure=coherence_measure,
             top_n=top_n,
@@ -558,9 +563,13 @@ class TMmodel(object):
         # Convert topic descriptions to lists of words
         topics_ = [desc.split(', ')[:top_n] for desc in self._tpc_descriptions]
         self._logger.info("Topic descriptions converted to lists.")
-        reference_text = self._load_reference_text(file_path)
+        
+        with open(file_path, 'r', encoding='utf-8') as f:
+            reference_text = f.readlines()
+        reference_text = [line.split(" 0 ")[-1].split() for line in reference_text]
         # Keep only reference_text with content
-        reference_text = [doc for doc in reference_text if len(doc) > 0]
+        #reference_text = self._load_reference_text(file_path)
+        #reference_text = [doc for doc in reference_text if len(doc) > 0]
 
         vocab = Dictionary(reference_text)
         self._logger.info("Dictionary created from reference text.")

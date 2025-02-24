@@ -939,9 +939,9 @@ class HermesEquivalencesGenerator(object):
         """
         Generate equivalences for the given words and language.
         """
-        ######################################################################### 
+        ###################################################################### 
         # Get words that will be used to detect equivalences
-        ########################################################################
+        ######################################################################
         if source not in ["vocabulary", "tm"]:
             raise ValueError("source must be either 'vocabulary' or 'tm'")
         
@@ -976,9 +976,9 @@ class HermesEquivalencesGenerator(object):
         
         self._logger.info(f"-- -- Clusters will be created on {len(all_words)} words")
         
-        ######################################################################### 
+        ###################################################################### 
         # Generate clusters
-        ########################################################################
+        ######################################################################
         word_embeddings = self._get_embeddings(all_words)
         words = list(word_embeddings.keys())
         embeddings = np.array(list(word_embeddings.values()))
@@ -988,9 +988,9 @@ class HermesEquivalencesGenerator(object):
         #import pdb; pdb.set_trace()
         word_groups, stats = self._get_words_by_cluster_sim(embeddings, words)
         
-        ######################################################################### 
+        ####################################################################### 
         # Generate equivalences
-        ########################################################################
+        #######################################################################
         if language == "es":
             language = "spanish"
         else:
